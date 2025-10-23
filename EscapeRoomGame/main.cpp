@@ -19,7 +19,7 @@ int main(int argc, char** argv) {
     // 1. Initialize GLUT
     glutInit(&argc, argv);
     glutInitDisplayMode(GLUT_DOUBLE | GLUT_DEPTH | GLUT_RGBA);
-    glutInitWindowPosition(100, 100);
+    glutInitWindowPosition(50, 50);
     glutInitWindowSize(win_width, win_height);
     glutCreateWindow("Escape Room Game");
 
