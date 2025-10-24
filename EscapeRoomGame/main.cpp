@@ -225,7 +225,7 @@ void specialKeysUp(int key, int x, int y) {
 
 void mouseMotion(int x, int y) {
 	// Update modifiers
-	g_camera->updateModifiers(glutGetModifiers());
+	//g_camera->updateModifiers(glutGetModifiers());
 	// Pass mouse motion event to camera
 	g_camera->onMouseMovement(x, y);
 }
