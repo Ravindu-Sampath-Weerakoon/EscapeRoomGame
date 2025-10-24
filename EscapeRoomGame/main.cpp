@@ -27,24 +27,17 @@ int win_height = 720;
 // We need to calculate delta-time
 int g_lastTime = 0;
 
-// 2. CREATE A GLOBAL CAMERA POINTER
-// We create it as a pointer and initialize it to nullptr.
-// The actual object will be created inside main() AFTER glutInit.
+// Global Camera Pointer
 Camera* g_camera = nullptr;
 
-
-// --- Global Pointers ---
-Labels* g_labels = nullptr; //  2. CREATE A GLOBAL POINTER FOR LABELS
-
+// Global Labels Pointer
+Labels* g_labels = nullptr;
 
 // --- Function Declarations ---
-// We need to tell C++ about these functions before main() uses them
 void display();
 void reshape(int w, int h);
 void init();
 void idle();
-
-// Input callback declarations
 void keyboard(unsigned char key, int x, int y);
 void keyboardUp(unsigned char key, int x, int y);
 void specialKeys(int key, int x, int y);
@@ -57,7 +50,7 @@ void welcomeConsoleMessage() {
 }
 
 // ================================================================
-// MAIN FUNCTION (Corrected)
+// MAIN FUNCTION
 // ================================================================
 int main(int argc, char** argv) {
 	welcomeConsoleMessage();
@@ -65,16 +58,12 @@ int main(int argc, char** argv) {
 
 	// 1. Initialize GLUT
 	glutInit(&argc, argv); // <-- GLUT is initialized
-	glutInitDisplayMode(GLUT_DOUBLE | GLUT_DEPTH | GLUT_RGBA);
+	// Request Double Buffering, Depth Buffer, RGBA Color, and Multisampling
+	glutInitDisplayMode(GLUT_DOUBLE | GLUT_DEPTH | GLUT_RGBA | GLUT_MULTISAMPLE); // <-- Correct single call
 
-	// THIS IS THE NEW LINE:
-	glutInitDisplayMode(GLUT_DOUBLE | GLUT_DEPTH | GLUT_RGBA | GLUT_MULTISAMPLE); // <-- Add GLUT_MULTISAMPLE
-
-	// --- FIX: CREATE THE CAMERA OBJECT *AFTER* glutInit ---
-	// This gives the g_camera pointer a valid object to point to.
+	// Create Camera and Labels objects *after* glutInit
 	g_camera = new Camera(win_width, win_height);
-	// 3. CREATE THE LABELS OBJECT
-	g_labels = new Labels(win_width, win_height); 
+	g_labels = new Labels(win_width, win_height);
 
 	// Center the window
 	int screen_width = glutGet(GLUT_SCREEN_WIDTH);
@@ -87,7 +76,6 @@ int main(int argc, char** argv) {
 	glutCreateWindow("Escape Room Game"); // <-- Window is now created
 
 	// 2. Register Callback Functions
-	// These functions tell GLUT what to do in different situations
 	glutDisplayFunc(display);
 	glutReshapeFunc(reshape);
 	glutKeyboardFunc(keyboard);
@@ -97,30 +85,25 @@ int main(int argc, char** argv) {
 	glutSpecialUpFunc(specialKeysUp);
 	glutPassiveMotionFunc(mouseMotion); // For mouse look
 
-	// --- Configure the Camera ---
-	// Use the -> operator because g_camera is a pointer
+	// Configure the Camera
 	g_camera->setGroundLevel(1.5f);
 	g_camera->setPosition(0.0f, 1.5f, 5.0f);
 
-	// 3. Call your one-time setup function
+	// 3. Call one-time setup functions
 	init();
-
-	// Call the camera's init() function
-	// This is the function we added to set the cursor
-	g_camera->init();
+	g_camera->init(); // Camera setup that requires GLUT/Window
 
 	// 4. Start the Main Game Loop
 	g_lastTime = glutGet(GLUT_ELAPSED_TIME); // Init timer for delta-time
 	glutMainLoop();
 
-	// 5. Clean up memory
+	// 5. Clean up memory (though MainLoop never exits)
 	delete g_camera;
 	delete g_labels;
-
 	g_camera = nullptr;
 	g_labels = nullptr;
 
-	return 0; // Will never be reached
+	return 0;
 }
 
 
@@ -128,161 +111,121 @@ int main(int argc, char** argv) {
 // CALLBACK FUNCTIONS
 // ================================================================
 
-/**
- * @brief Main drawing function (called every frame)
- */
 void display() {
-	// Clear the screen (color and depth buffers)
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-	// Set up the camera (ModelView matrix)
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
 
-	// === USE THE CAMERA ===
-	// Use -> because g_camera is a pointer
+	// Apply camera view transformation
 	g_camera->applyView();
 
-	// --- Draw your scene here ---
-
-	// Call your function from the GraphicsUtils module!
+	// --- Draw 3D Scene ---
 	drawAxes(40.0f);
-
-
-	// 👇 Draw the new grid
-	// This creates a 40x40 unit grid with 40 lines
 	drawGrid(40.0f, 40);
+	// drawRoom(); // Add later
 
-	// Later, you will add:
-	// drawRoom();
-	// drawTable();
-
-
-	// --- 2D UI (Draw this last!) ---
-	// 👈 5. CALL THE LABELS DRAW FUNCTION
-	// Ask the camera for its mode and pass it to the labels
+	// --- Draw 2D UI (Labels) ---
 	g_labels->draw(g_camera->isDeveloperMode());
 
-	// --- End of scene ---
-
-	// Swap the front and back buffers to display the new frame
+	// Swap buffers to show the drawn frame
 	glutSwapBuffers();
 }
 
-/**
- * @brief Called when the window is resized
- */
 void reshape(int w, int h) {
 	win_width = w;
 	win_height = h;
+	if (h == 0) h = 1; // Prevent division by zero
 
-	// Prevent division by zero
-	if (h == 0) h = 1;
-
-	// Set the viewport to match the new window size
 	glViewport(0, 0, w, h);
 
-	// Set up the projection matrix (the camera's lens)
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
-	gluPerspective(
-		60.0,                  // 60-degree Field of View (FOV)
-		(float)w / (float)h,   // Aspect ratio (width / height)
-		0.1,                   // Near clipping plane
-		100.0                  // Far clipping plane
-	);
+	gluPerspective(60.0, (float)w / h, 0.1, 100.0);
 
-	// Notify the camera of the resize
+	// Notify modules of resize
 	g_camera->onWindowResize(w, h);
-
-	// NOTIFY LABELS OF RESIZE
-	g_labels->onWindowResize(w, h); 
+	g_labels->onWindowResize(w, h);
 }
 
-/**
- * @brief One-time OpenGL setup
- */
 void init() {
-	// Set a dark grey background color
-	glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
+	glClearColor(0.1f, 0.1f, 0.1f, 1.0f); // Dark grey background
+	glEnable(GL_DEPTH_TEST); // Enable Z-buffering
 
-	// Enable the depth test (so objects draw in the correct order)
-	glEnable(GL_DEPTH_TEST);
+	// --- Antialiasing ---
+	//glEnable(GL_MULTISAMPLE); // <-- CORRECT way to enable smoothing
 
-	glEnable(GL_LINE_SMOOTH);
-	glEnable(GL_BLEND);
-	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-	glHint(GL_LINE_SMOOTH_HINT, GL_NICEST);
-
-	// Enable basic lighting
+	// --- Lighting ---
 	glEnable(GL_LIGHTING);
-	glEnable(GL_LIGHT0); // Turn on one light source
+	glEnable(GL_LIGHT0); // Enable light source 0
+	// You might add light position/color settings here later
 
-	// Set all objects to have a white color by default
-	glColor3f(1.0f, 1.0f, 1.0f);
-
-	//  ADD THIS LINE TO ENABLE SMOOTHING
-	/*glEnable(GL_MULTISAMPLE);*/
-	//work this line
-	glEnable(GLUT_MULTISAMPLE);
+	glColor3f(1.0f, 1.0f, 1.0f); // Set default draw color to white
 }
 
-/**
- * @brief Called continuously when no other events are happening
- */
 void idle() {
-	// --- Calculate Delta-Time (dt) ---
-	// This is the time in seconds since the last frame
+	// Calculate Delta-Time (dt)
 	int currentTime = glutGet(GLUT_ELAPSED_TIME);
-	float dt = (currentTime - g_lastTime) / 1000.0f; // Convert milliseconds to seconds
+	float dt = (currentTime - g_lastTime) / 1000.0f; // Time in seconds
+	// Prevent large dt jumps (e.g., after breakpoint)
+	if (dt > 0.1f) dt = 0.1f;
 	g_lastTime = currentTime;
 
-	// --- Update the Camera ---
-	// This handles all movement, physics, and input logic
+	// Update Camera (handles movement, physics, smoothing)
 	g_camera->update(dt);
 
-	// Tell OpenGL that the screen needs to be redrawn
+	// Request a redraw for the next frame
 	glutPostRedisplay();
 }
 
 
 // ================================================================
 // INPUT FUNCTIONS
-// These just pass the input along to the camera class.
 // ================================================================
 
 void keyboard(unsigned char key, int x, int y) {
-	// 27 is the ASCII code for the ESCAPE key
-	if (key == 27) {
+	// IMPORTANT: Update modifiers FIRST in every input callback
+	g_camera->updateModifiers(glutGetModifiers());
+
+	if (key == 27) { // ESC Key
 		printf("ESC key pressed. Exiting.\n");
-		//7. CLEAN UP ON EXIT// Clean up memory
 		delete g_camera;
-		delete g_labels; 
-		exit(0); // Quit the program
+		delete g_labels;
+		exit(0);
 	}
-
-	//8. ADD THE TAB KEY
-	if (key == '\t') { // '\t' is the character for the Tab key
+	if (key == '\t') { // Tab Key
 		g_labels->toggleHelp();
-		return; // Don't pass the Tab key to the camera
+		return; // Consume the Tab key, don't pass to camera
 	}
 
-	// Pass all other keys to the camera
+	// Pass other keys to the camera
 	g_camera->onKeyDown(key);
 }
 
 void keyboardUp(unsigned char key, int x, int y) {
+	// Update modifiers
+	g_camera->updateModifiers(glutGetModifiers());
+	// Pass key up event to camera
 	g_camera->onKeyUp(key);
 }
 
 void specialKeys(int key, int x, int y) {
+	// Update modifiers
+	g_camera->updateModifiers(glutGetModifiers());
+	// Pass special key down event to camera
 	g_camera->onSpecialKeyDown(key);
 }
 
 void specialKeysUp(int key, int x, int y) {
+	// Update modifiers
+	g_camera->updateModifiers(glutGetModifiers());
+	// Pass special key up event to camera
 	g_camera->onSpecialKeyUp(key);
 }
 
 void mouseMotion(int x, int y) {
+	// Update modifiers
+	g_camera->updateModifiers(glutGetModifiers());
+	// Pass mouse motion event to camera
 	g_camera->onMouseMovement(x, y);
 }

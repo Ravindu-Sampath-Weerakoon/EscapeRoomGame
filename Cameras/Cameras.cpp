@@ -3,6 +3,7 @@
 #include "pch.h" // Must be the first include
 #include "Cameras.h" // Include your own header
 #include <stdio.h> // For printf
+#include <math.h> // For sqrt
 
 Camera::Camera(int windowWidth, int windowHeight) {
     onWindowResize(windowWidth, windowHeight); // Set up window dimensions
@@ -28,7 +29,7 @@ Camera::Camera(int windowWidth, int windowHeight) {
 
     // Set physics
     m_groundLevel = 0.0f;
-    m_velocityY = 0.0f;
+    // m_velocityY = 0.0f; // Removed, now use m_velY
     m_isJumping = false;
     m_gravity = -20.0f; // A good gameplay gravity value
     m_jumpForce = 8.0f;
@@ -39,7 +40,12 @@ Camera::Camera(int windowWidth, int windowHeight) {
     m_velX = 0.0f;
     m_velY = 0.0f;
     m_velZ = 0.0f;
-    // ===========================
+
+    // === ADDED FOR SPRINTING ===
+    m_sprintMultiplier = 5.0f;       // The speed boost (Set to 5x as requested)
+    m_currentSpeedMultiplier = 1.0f; // Start at normal speed (1.0x)
+    m_sprintAcceleration = 10.0f;    // How fast to speed up/slow down sprint
+    m_inputSprint = false;
 
     // Calculate initial vectors
     recalculateVectors();
@@ -53,6 +59,8 @@ void Camera::init() {
     // We do this here because glut has been initialized.
     if (!m_isDeveloperMode) {
         glutSetCursor(GLUT_CURSOR_NONE);
+        centerMouse(); // Center mouse initially in game mode
+        m_firstMouse = true; // Ensure centering logic works correctly on start
     }
 }
 
@@ -61,6 +69,8 @@ void Camera::setPosition(float x, float y, float z) {
     m_posX = x;
     m_posY = y;
     m_posZ = z;
+    // Reset velocity when position is set externally
+    m_velX = m_velY = m_velZ = 0.0f;
 }
 
 void Camera::onWindowResize(int w, int h) {
@@ -94,8 +104,10 @@ void Camera::recalculateVectors() {
         m_rightZ /= len;
     }
     else {
-        m_rightX = 1.0f;
-        m_rightZ = 0.0f;
+        // Handle case where forward is pointing straight up or down
+        // Recalculate Right based on Yaw only
+        m_rightX = cos(yawRad);
+        m_rightZ = sin(yawRad);
     }
 }
 
@@ -107,7 +119,8 @@ void Camera::toggleMode() {
         printf("Camera: Developer Mode ENABLED\n");
         // Show the cursor
         glutSetCursor(GLUT_CURSOR_INHERIT);
-        // Stop any jumping
+        // Stop any jumping and reset Y velocity
+        m_isJumping = false;
         m_velY = 0;
     }
     else {
@@ -117,14 +130,17 @@ void Camera::toggleMode() {
         // Stick to ground
         m_posY = m_groundLevel;
         m_isJumping = false;
-        m_velocityY = 0;
+        m_velY = 0; // Use m_velY
         // Center the mouse for a smooth transition
         centerMouse();
     }
 }
 
 void Camera::centerMouse() {
-    glutWarpPointer(m_windowCenterX, m_windowCenterY);
+    // Only warp if the window has focus and cursor is hidden (Game Mode)
+    if (!m_isDeveloperMode) {
+        glutWarpPointer(m_windowCenterX, m_windowCenterY);
+    }
 }
 
 void Camera::applyView() {
@@ -139,20 +155,20 @@ void Camera::applyView() {
 
 void Camera::onKeyDown(unsigned char key) {
     switch (key) {
-    case 'w': m_inputForward = true;    break;
-    case 's': m_inputBackward = true;   break;
-    case 'a': m_inputStrafeLeft = true; break;
-    case 'd': m_inputStrafeRight = true; break;
-    case 'p': toggleMode();             break;
+    case 'w': case 'W': m_inputForward = true;    break;
+    case 's': case 'S': m_inputBackward = true;   break;
+    case 'a': case 'A': m_inputStrafeLeft = true; break;
+    case 'd': case 'D': m_inputStrafeRight = true; break;
+    case 'p': case 'P': toggleMode();             break;
     case ' ': // Spacebar
         if (!m_isDeveloperMode && !m_isJumping) {
             jump();
         }
         break;
-    case 'q': // Dev mode "fly down"
+    case 'q': case 'Q': // Dev mode "fly down"
         if (m_isDeveloperMode) m_inputFlyDown = true;
         break;
-    case 'e': // Dev mode "fly up"
+    case 'e': case 'E': // Dev mode "fly up"
         if (m_isDeveloperMode) m_inputFlyUp = true;
         break;
     }
@@ -160,12 +176,12 @@ void Camera::onKeyDown(unsigned char key) {
 
 void Camera::onKeyUp(unsigned char key) {
     switch (key) {
-    case 'w': m_inputForward = false;    break;
-    case 's': m_inputBackward = false;   break;
-    case 'a': m_inputStrafeLeft = false; break;
-    case 'd': m_inputStrafeRight = false; break;
-    case 'q': m_inputFlyDown = false;    break;
-    case 'e': m_inputFlyUp = false;      break;
+    case 'w': case 'W': m_inputForward = false;    break;
+    case 's': case 'S': m_inputBackward = false;   break;
+    case 'a': case 'A': m_inputStrafeLeft = false; break;
+    case 'd': case 'D': m_inputStrafeRight = false; break;
+    case 'q': case 'Q': m_inputFlyDown = false;    break;
+    case 'e': case 'E': m_inputFlyUp = false;      break;
     }
 }
 
@@ -198,16 +214,25 @@ void Camera::onMouseMovement(int x, int y) {
         return;
     }
 
-    // Prevent massive jump on first frame or after mode toggle
+    // Prevent massive jump on first frame or after mode toggle/init
     if (m_firstMouse) {
-        centerMouse();
-        m_firstMouse = false;
+        // Check if the initial warp has happened
+        if (x == m_windowCenterX && y == m_windowCenterY) {
+            m_firstMouse = false;
+        }
+        // Don't process movement until the cursor is centered
         return;
     }
 
     // Calculate how much the mouse has moved from the center
     float deltaX = (float)(x - m_windowCenterX);
     float deltaY = (float)(m_windowCenterY - y); // Inverted Y-axis
+
+    // Only process if there was actual movement (prevents drift on some systems)
+    if (fabs(deltaX) < 0.1f && fabs(deltaY) < 0.1f) {
+        centerMouse(); // Re-center even if no movement detected this frame
+        return;
+    }
 
     // Apply sensitivity and update yaw/pitch
     m_yaw += deltaX * m_mouseSensitivity;
@@ -225,22 +250,46 @@ void Camera::onMouseMovement(int x, int y) {
     centerMouse();
 }
 
+// ================================================================
+// This function receives modifier state from input callbacks
+// ================================================================
+void Camera::updateModifiers(int modifiers) {
+    bool newSprintState = (modifiers & GLUT_ACTIVE_SHIFT);
+
+    // Optional: Print only when state changes
+    // if (newSprintState != m_inputSprint) {
+    //     printf("DEBUG: Shift %s\n", newSprintState ? "PRESSED" : "RELEASED");
+    // }
+
+    m_inputSprint = newSprintState;
+}
+
+
 void Camera::jump() {
     if (m_isJumping) return;
-    m_isJumping = true; // <-- TYPO WAS HERE, NOW FIXED
-    m_velY = m_jumpForce; // Use m_velY, not m_velocityY
+    m_isJumping = true;
+    m_velY = m_jumpForce; // Start upward velocity
 }
 
 // ================================================================
-// THIS IS THE FULLY UPDATED "UPDATE" FUNCTION FOR SMOOTH MOVEMENT
+// Camera Update Function (Called every frame from idle())
 // ================================================================
 void Camera::update(float dt) {
-    // 1. Recalculate orientation vectors (based on yaw/pitch)
+    // Prevent huge jumps if dt is abnormally large (e.g., after breakpoint)
+    if (dt > 0.1f) dt = 0.1f;
+
+    // 1. SMOOTH THE SPEED MULTIPLIER (Sprint)
+    float targetMultiplier = m_inputSprint ? m_sprintMultiplier : 1.0f;
+    m_currentSpeedMultiplier += (targetMultiplier - m_currentSpeedMultiplier) * m_sprintAcceleration * dt;
+
+    // Optional: Print sprint status continuously
+    // printf("DEBUG Update: SprintActive=%d, Multiplier=%.2f\n", m_inputSprint, m_currentSpeedMultiplier);
+
+    // 2. Recalculate orientation vectors (based on yaw/pitch)
     recalculateVectors();
 
-    // 2. Handle Look (Dev Mode)
+    // 3. Handle Look (Dev Mode - Arrow Keys)
     if (m_isDeveloperMode) {
-        // Arrow key looking
         if (m_inputLookLeft)  m_yaw -= m_lookSpeed * dt;
         if (m_inputLookRight) m_yaw += m_lookSpeed * dt;
         if (m_inputLookUp)    m_pitch += m_lookSpeed * dt;
@@ -251,76 +300,82 @@ void Camera::update(float dt) {
         if (m_pitch < -89.0f) m_pitch = -89.0f;
     }
 
-    // 3. Determine Target Velocity (from input)
-    float speed = m_isDeveloperMode ? m_devMoveSpeed : m_moveSpeed;
+    // 4. Determine Target Velocity (Based on Input & Mode)
+    float baseSpeed = m_isDeveloperMode ? m_devMoveSpeed : m_moveSpeed;
+    float currentSpeed = baseSpeed * m_currentSpeedMultiplier; // Apply sprint
+
     float targetVelX = 0.0f;
     float targetVelY = 0.0f;
     float targetVelZ = 0.0f;
 
-    // --- Calculate XZ target velocity (from WASD) ---
-    float dirX = 0.0f, dirZ = 0.0f;
-    if (m_inputForward) { dirX += m_forwardX; dirZ += m_forwardZ; }
-    if (m_inputBackward) { dirX -= m_forwardX; dirZ -= m_forwardZ; }
-    if (m_inputStrafeLeft) { dirX -= m_rightX;   dirZ -= m_rightZ; }
-    if (m_inputStrafeRight) { dirX += m_rightX;   dirZ += m_rightZ; }
+    // --- XZ Target Velocity (WASD) ---
+    float moveDirX = 0.0f, moveDirZ = 0.0f;
+    if (m_inputForward) { moveDirX += m_forwardX; moveDirZ += m_forwardZ; }
+    if (m_inputBackward) { moveDirX -= m_forwardX; moveDirZ -= m_forwardZ; }
+    if (m_inputStrafeLeft) { moveDirX -= m_rightX;   moveDirZ -= m_rightZ; }
+    if (m_inputStrafeRight) { moveDirX += m_rightX;   moveDirZ += m_rightZ; }
 
-    // Normalize XZ direction
-    float len = sqrt(dirX * dirX + dirZ * dirZ);
-    if (len > 0.0001f) {
-        dirX /= len;
-        dirZ /= len;
+    // Normalize XZ direction vector if there's movement
+    float moveLen = sqrt(moveDirX * moveDirX + moveDirZ * moveDirZ);
+    if (moveLen > 0.0001f) {
+        moveDirX /= moveLen;
+        moveDirZ /= moveLen;
     }
-    targetVelX = dirX * speed;
-    targetVelZ = dirZ * speed;
+    targetVelX = moveDirX * currentSpeed;
+    targetVelZ = moveDirZ * currentSpeed;
 
-    // --- Calculate Y target velocity (Q/E or Jump Physics) ---
+    // --- Y Target Velocity (Q/E or Jump Physics) ---
     if (m_isDeveloperMode) {
-        // Dev mode: Q/E sets target Y velocity
-        if (m_inputFlyUp)   targetVelY = m_devMoveSpeed;
-        else if (m_inputFlyDown) targetVelY = -m_devMoveSpeed;
+        // Dev mode: Q/E sets target Y velocity directly
+        if (m_inputFlyUp)       targetVelY = currentSpeed; // Sprint affects flying speed
+        else if (m_inputFlyDown) targetVelY = -currentSpeed;
+        else                     targetVelY = 0.0f;
     }
     else {
         // Game mode: Jump physics controls Y velocity
         if (m_isJumping) {
-            m_velY += m_gravity * dt; // Apply gravity
-            if (m_posY <= m_groundLevel && m_velY < 0) { // Check for landing
-                m_posY = m_groundLevel;
+            m_velY += m_gravity * dt; // Apply gravity to current velocity
+            // Check for landing (only if moving downwards)
+            if (m_posY <= m_groundLevel && m_velY < 0.0f) {
+                m_posY = m_groundLevel; // Snap to ground
                 m_isJumping = false;
-                m_velY = 0;
+                m_velY = 0;         // Stop vertical velocity
             }
         }
         else {
-            m_posY = m_groundLevel; // Stick to ground
+            // Not jumping: ensure player stays on ground
+            m_posY = m_groundLevel;
             m_velY = 0;
         }
-        // This is the key: targetVelY is set by physics (m_velY), not input.
-        // But in jump(), we set m_velY directly.
+        // In game mode, the physics directly sets m_velY.
+        // The target velocity *is* the current physics velocity.
         targetVelY = m_velY;
     }
 
-    // 4. Apply Smoothing (Acceleration/Damping)
-    // Check if there is XZ movement input
-    bool hasXZInput = m_inputForward || m_inputBackward || m_inputStrafeLeft || m_inputStrafeRight;
+    // 5. Apply Smoothing (Lerp current velocity towards target velocity)
+    bool hasXZInput = moveLen > 0.0001f;
     float currentAccel = hasXZInput ? m_acceleration : m_damping;
 
-    // Interpolate current XZ velocity towards target XZ velocity
     m_velX += (targetVelX - m_velX) * currentAccel * dt;
     m_velZ += (targetVelZ - m_velZ) * currentAccel * dt;
 
-    // 5. Apply Smoothing for Y (Dev Mode Only)
+    // Apply Y smoothing only in Dev Mode
     if (m_isDeveloperMode) {
         bool hasYInput = m_inputFlyUp || m_inputFlyDown;
         currentAccel = hasYInput ? m_acceleration : m_damping;
         m_velY += (targetVelY - m_velY) * currentAccel * dt;
     }
-    // In Game Mode, m_velY is controlled by physics (gravity) directly.
-    // So we don't smooth it, we just use the value calculated in step 3.
+    // In Game Mode, m_velY is already set by physics, no smoothing needed.
     else {
         m_velY = targetVelY;
     }
 
+
     // 6. Apply Final Velocity to Position
     m_posX += m_velX * dt;
     m_posZ += m_velZ * dt;
-    m_posY += m_velY * dt; // Y position is updated by physics (game) or smoothed velocity (dev)
+    m_posY += m_velY * dt; // Apply calculated Y velocity
+
+    // Optional: Add collision detection/response here later
+    // e.g., clamp m_posX, m_posY, m_posZ within room boundaries
 }

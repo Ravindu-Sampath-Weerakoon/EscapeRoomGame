@@ -54,6 +54,11 @@ public:
      */
     void onWindowResize(int w, int h);
 
+    /**
+     * @brief Receives modifier key state (Shift, Ctrl, Alt) from input callbacks.
+     */
+    void updateModifiers(int modifiers); // <-- THIS IS THE NEW FUNCTION
+
 
     // --- CONFIGURATION ---
 
@@ -84,7 +89,6 @@ private:
 
     // --- PHYSICS (GAME MODE) ---
     float m_groundLevel;
-    float m_velocityY;   // For jumping
     bool  m_isJumping;
     float m_gravity;
     float m_jumpForce;
@@ -108,8 +112,16 @@ private:
     float m_velY;         // Current velocity on Y
     float m_velZ;         // Current velocity on Z
 
+    // --- SPRINT VARIABLES ---
+    float m_sprintMultiplier;
+    float m_currentSpeedMultiplier;
+    float m_sprintAcceleration;
+    bool  m_inputSprint;
+
     // --- MOUSE LOOK STATE ---
     int  m_windowWidth, m_windowHeight;
     int  m_windowCenterX, m_windowCenterY;
     bool m_firstMouse; // Prevents camera from jumping on first mouse move
+
+
 };
