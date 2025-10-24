@@ -67,6 +67,9 @@ int main(int argc, char** argv) {
 	glutInit(&argc, argv); // <-- GLUT is initialized
 	glutInitDisplayMode(GLUT_DOUBLE | GLUT_DEPTH | GLUT_RGBA);
 
+	// THIS IS THE NEW LINE:
+	glutInitDisplayMode(GLUT_DOUBLE | GLUT_DEPTH | GLUT_RGBA | GLUT_MULTISAMPLE); // <-- Add GLUT_MULTISAMPLE
+
 	// --- FIX: CREATE THE CAMERA OBJECT *AFTER* glutInit ---
 	// This gives the g_camera pointer a valid object to point to.
 	g_camera = new Camera(win_width, win_height);
@@ -206,12 +209,22 @@ void init() {
 	// Enable the depth test (so objects draw in the correct order)
 	glEnable(GL_DEPTH_TEST);
 
+	glEnable(GL_LINE_SMOOTH);
+	glEnable(GL_BLEND);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	glHint(GL_LINE_SMOOTH_HINT, GL_NICEST);
+
 	// Enable basic lighting
 	glEnable(GL_LIGHTING);
 	glEnable(GL_LIGHT0); // Turn on one light source
 
 	// Set all objects to have a white color by default
 	glColor3f(1.0f, 1.0f, 1.0f);
+
+	//  ADD THIS LINE TO ENABLE SMOOTHING
+	/*glEnable(GL_MULTISAMPLE);*/
+	//work this line
+	glEnable(GLUT_MULTISAMPLE);
 }
 
 /**
