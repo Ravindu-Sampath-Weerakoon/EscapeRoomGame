@@ -73,17 +73,21 @@ void Labels::draw(bool isDeveloperMode) {
             renderText(x, y, " Q/E: Fly Up/Down");
             y -= m_lineHeight;
             renderText(x, y, "Arrows: Look Around");
+            y -= m_lineHeight;
+            renderText(x, y, "Shift: Move Faster");
         }
         else {
             glColor3f(0.8f, 1.0f, 0.8f); // Green-ish tint for Game
             renderText(x, y, "[GAME MODE]");
             y -= m_lineHeight;
             glColor3f(1.0f, 1.0f, 0.9f);
-            renderText(x, y, "WASD: Move (Walk)");
+            renderText(x, y, " W A S D: Move (Walk)");
             y -= m_lineHeight;
             renderText(x, y, " Mouse: Look Around");
             y -= m_lineHeight;
             renderText(x, y, " Space: Jump");
+            y -= m_lineHeight;
+            renderText(x, y, " Shift: Sprint(Run)");
         }
     }
 
