@@ -75,9 +75,9 @@ void Camera::recalculateVectors() {
 
     // Calculate the Right vector (Cross product of Forward and World Up)
     // World Up is (0, 1, 0)
-    m_rightX = m_forwardZ; // (m_forwardY * 0 - m_forwardZ * 1)
+    m_rightX = -m_forwardZ; // (m_forwardY * 0 - m_forwardZ * 1)
     m_rightY = 0;          // (m_forwardZ * 0 - m_forwardX * 0)
-    m_rightZ = -m_forwardX; // (m_forwardX * 1 - m_forwardY * 0)
+    m_rightZ = m_forwardX; // (m_forwardX * 1 - m_forwardY * 0)
 
     // Normalize the Right vector
     float len = sqrt(m_rightX * m_rightX + m_rightZ * m_rightZ);
