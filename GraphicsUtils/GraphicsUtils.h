@@ -6,4 +6,12 @@
  */
 void drawAxes(float length);
 
+/**
+ * @brief Draws a grid of lines on the XZ plane, centered at the origin.
+ * @param size The total width and depth of the grid (e.g., 20.0f).
+ * @param numSegments The number of squares in each direction (e.g., 20).
+ */
+void drawGrid(float size, int numSegments);
+
+
 // Add other function declarations here later...

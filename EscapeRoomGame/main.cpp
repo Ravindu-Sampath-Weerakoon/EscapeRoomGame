@@ -132,7 +132,12 @@ void display() {
 	// --- Draw your scene here ---
 
 	// Call your function from the GraphicsUtils module!
-	drawAxes(10.0f);
+	drawAxes(40.0f);
+
+
+	// 👇 Draw the new grid
+	// This creates a 40x40 unit grid with 40 lines
+	drawGrid(40.0f, 40);
 
 	// Later, you will add:
 	// drawRoom();

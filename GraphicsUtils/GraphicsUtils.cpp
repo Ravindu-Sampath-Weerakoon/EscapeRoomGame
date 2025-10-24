@@ -35,3 +35,36 @@ void drawAxes(float length) {
 
 
 }
+
+void drawGrid(float size, int numSegments)
+{
+    // Disable lighting for the grid
+    glDisable(GL_LIGHTING);
+
+    // Set the grid color (e.g., a medium grey)
+    glColor3f(0.4f, 0.4f, 0.4f);
+
+    float halfSize = size / 2.0f;
+    float segmentSize = size / numSegments;
+
+    glBegin(GL_LINES);
+    // Loop from -halfSize to +halfSize
+    for (int i = 0; i <= numSegments; ++i) {
+        float pos = -halfSize + (i * segmentSize);
+
+        // Draw line parallel to the Z-axis (at a constant x)
+        glVertex3f(pos, 0.0f, -halfSize);
+        glVertex3f(pos, 0.0f, halfSize);
+
+        // Draw line parallel to the X-axis (at a constant z)
+        glVertex3f(-halfSize, 0.0f, pos);
+        glVertex3f(halfSize, 0.0f, pos);
+    }
+    glEnd();
+
+    // Re-enable lighting for the rest of the scene
+    glEnable(GL_LIGHTING);
+
+    // Reset color to white
+    glColor3f(1.0f, 1.0f, 1.0f);
+}
