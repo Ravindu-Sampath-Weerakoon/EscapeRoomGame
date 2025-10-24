@@ -32,7 +32,7 @@ public:
     /**
      * @brief Finishes camera setup. Call this in main() AFTER glutCreateWindow().
      */
-    void init(); // <--- ADD THIS LINE
+    void init();
 
 
     // --- INPUT FUNCTIONS ---
@@ -56,6 +56,11 @@ public:
 
 
     // --- CONFIGURATION ---
+
+    /**
+     * @brief Returns true if the camera is in developer fly mode.
+     */
+    bool isDeveloperMode() const { return m_isDeveloperMode; }
 
     void setPosition(float x, float y, float z);
     void setGroundLevel(float level) { m_groundLevel = level; m_posY = level; }
@@ -86,7 +91,10 @@ private:
 
     // --- INPUT STATE (INTERNAL) ---
     // This tracks which keys are currently held down
+    //
+    // --- TYPO FIX IS HERE ---
     bool m_inputForward, m_inputBackward, m_inputStrafeLeft, m_inputStrafeRight;
+    //
     bool m_inputLookLeft, m_inputLookRight, m_inputLookUp, m_inputLookDown;
     bool m_inputFlyUp, m_inputFlyDown; // Dev mode Q/E
 

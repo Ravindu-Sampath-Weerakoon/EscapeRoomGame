@@ -15,6 +15,7 @@
 // --- Your Custom Game Modules ---
 #include "GraphicsUtils.h"
 #include "Cameras.h"
+#include "Labels.h"
 
 //--- OpenGL Libraries ---
 #include <glut.h>
@@ -30,6 +31,11 @@ int g_lastTime = 0;
 // We create it as a pointer and initialize it to nullptr.
 // The actual object will be created inside main() AFTER glutInit.
 Camera* g_camera = nullptr;
+
+
+// --- Global Pointers ---
+Labels* g_labels = nullptr; //  2. CREATE A GLOBAL POINTER FOR LABELS
+
 
 // --- Function Declarations ---
 // We need to tell C++ about these functions before main() uses them
@@ -64,6 +70,8 @@ int main(int argc, char** argv) {
 	// --- FIX: CREATE THE CAMERA OBJECT *AFTER* glutInit ---
 	// This gives the g_camera pointer a valid object to point to.
 	g_camera = new Camera(win_width, win_height);
+	// 3. CREATE THE LABELS OBJECT
+	g_labels = new Labels(win_width, win_height); 
 
 	// Center the window
 	int screen_width = glutGet(GLUT_SCREEN_WIDTH);
@@ -104,7 +112,10 @@ int main(int argc, char** argv) {
 
 	// 5. Clean up memory
 	delete g_camera;
+	delete g_labels;
+
 	g_camera = nullptr;
+	g_labels = nullptr;
 
 	return 0; // Will never be reached
 }
@@ -143,6 +154,12 @@ void display() {
 	// drawRoom();
 	// drawTable();
 
+
+	// --- 2D UI (Draw this last!) ---
+	// 👈 5. CALL THE LABELS DRAW FUNCTION
+	// Ask the camera for its mode and pass it to the labels
+	g_labels->draw(g_camera->isDeveloperMode());
+
 	// --- End of scene ---
 
 	// Swap the front and back buffers to display the new frame
@@ -174,6 +191,9 @@ void reshape(int w, int h) {
 
 	// Notify the camera of the resize
 	g_camera->onWindowResize(w, h);
+
+	// NOTIFY LABELS OF RESIZE
+	g_labels->onWindowResize(w, h); 
 }
 
 /**
@@ -222,9 +242,18 @@ void keyboard(unsigned char key, int x, int y) {
 	// 27 is the ASCII code for the ESCAPE key
 	if (key == 27) {
 		printf("ESC key pressed. Exiting.\n");
-		delete g_camera; // Clean up memory
+		//7. CLEAN UP ON EXIT// Clean up memory
+		delete g_camera;
+		delete g_labels; 
 		exit(0); // Quit the program
 	}
+
+	//8. ADD THE TAB KEY
+	if (key == '\t') { // '\t' is the character for the Tab key
+		g_labels->toggleHelp();
+		return; // Don't pass the Tab key to the camera
+	}
+
 	// Pass all other keys to the camera
 	g_camera->onKeyDown(key);
 }
