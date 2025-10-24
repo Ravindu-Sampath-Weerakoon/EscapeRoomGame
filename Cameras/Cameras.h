@@ -91,10 +91,7 @@ private:
 
     // --- INPUT STATE (INTERNAL) ---
     // This tracks which keys are currently held down
-    //
-    // --- TYPO FIX IS HERE ---
     bool m_inputForward, m_inputBackward, m_inputStrafeLeft, m_inputStrafeRight;
-    //
     bool m_inputLookLeft, m_inputLookRight, m_inputLookUp, m_inputLookDown;
     bool m_inputFlyUp, m_inputFlyDown; // Dev mode Q/E
 
@@ -103,6 +100,13 @@ private:
     float m_devMoveSpeed;
     float m_lookSpeed;        // For arrow keys
     float m_mouseSensitivity;
+
+    // --- SMOOTHING / VELOCITY ---
+    float m_acceleration; // How fast to speed up
+    float m_damping;      // How fast to slow down
+    float m_velX;         // Current velocity on X
+    float m_velY;         // Current velocity on Y
+    float m_velZ;         // Current velocity on Z
 
     // --- MOUSE LOOK STATE ---
     int  m_windowWidth, m_windowHeight;

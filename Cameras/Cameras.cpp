@@ -33,11 +33,18 @@ Camera::Camera(int windowWidth, int windowHeight) {
     m_gravity = -20.0f; // A good gameplay gravity value
     m_jumpForce = 8.0f;
 
+    // === ADDED FOR SMOOTHING ===
+    m_acceleration = 12.0f;  // Tune this value
+    m_damping = 10.0f;       // Tune this value
+    m_velX = 0.0f;
+    m_velY = 0.0f;
+    m_velZ = 0.0f;
+    // ===========================
+
     // Calculate initial vectors
     recalculateVectors();
 
     // DO NOT call glutSetCursor here. GLUT is not initialized yet.
-    // glutSetCursor(GLUT_CURSOR_NONE); // <-- This line was removed.
 }
 
 // This is the new function that gets called from main()
@@ -75,9 +82,9 @@ void Camera::recalculateVectors() {
 
     // Calculate the Right vector (Cross product of Forward and World Up)
     // World Up is (0, 1, 0)
-    m_rightX = -m_forwardZ; // (m_forwardY * 0 - m_forwardZ * 1)
-    m_rightY = 0;          // (m_forwardZ * 0 - m_forwardX * 0)
-    m_rightZ = m_forwardX; // (m_forwardX * 1 - m_forwardY * 0)
+    m_rightX = -m_forwardZ; // Corrected sign
+    m_rightY = 0;
+    m_rightZ = m_forwardX;  // Corrected sign
 
     // Normalize the Right vector
     float len = sqrt(m_rightX * m_rightX + m_rightZ * m_rightZ);
@@ -100,6 +107,8 @@ void Camera::toggleMode() {
         printf("Camera: Developer Mode ENABLED\n");
         // Show the cursor
         glutSetCursor(GLUT_CURSOR_INHERIT);
+        // Stop any jumping
+        m_velY = 0;
     }
     else {
         printf("Camera: Game Mode ENABLED\n");
@@ -218,51 +227,19 @@ void Camera::onMouseMovement(int x, int y) {
 
 void Camera::jump() {
     if (m_isJumping) return;
-    //m_isJJumping = true;
-    m_velocityY = m_jumpForce;
+    m_isJumping = true; // <-- TYPO WAS HERE, NOW FIXED
+    m_velY = m_jumpForce; // Use m_velY, not m_velocityY
 }
 
+// ================================================================
+// THIS IS THE FULLY UPDATED "UPDATE" FUNCTION FOR SMOOTH MOVEMENT
+// ================================================================
 void Camera::update(float dt) {
-    // This function is the "engine"
-    // It runs every frame from your idle() function
-
     // 1. Recalculate orientation vectors (based on yaw/pitch)
     recalculateVectors();
 
-    // 2. Get current speed
-    float speed = m_isDeveloperMode ? m_devMoveSpeed : m_moveSpeed;
-
-    // 3. Handle Movement (WASD)
-    // We calculate a "wish" direction based on input
-    float moveX = 0.0f;
-    float moveY = 0.0f;
-    float moveZ = 0.0f;
-
-    if (m_inputForward) {
-        moveX += m_forwardX;
-        moveZ += m_forwardZ;
-    }
-    if (m_inputBackward) {
-        moveX -= m_forwardX;
-        moveZ -= m_forwardZ;
-    }
-    if (m_inputStrafeLeft) {
-        moveX -= m_rightX;
-        moveZ -= m_rightZ;
-    }
-    if (m_inputStrafeRight) {
-        moveX += m_rightX;
-        moveZ += m_rightZ;
-    }
-
-    // Apply movement
-    m_posX += moveX * speed * dt;
-    m_posZ += moveZ * speed * dt;
-
-
-    // 4. Handle Mode-Specific Logic
+    // 2. Handle Look (Dev Mode)
     if (m_isDeveloperMode) {
-        // --- DEVELOPER MODE ---
         // Arrow key looking
         if (m_inputLookLeft)  m_yaw -= m_lookSpeed * dt;
         if (m_inputLookRight) m_yaw += m_lookSpeed * dt;
@@ -272,32 +249,78 @@ void Camera::update(float dt) {
         // Clamp pitch
         if (m_pitch > 89.0f)  m_pitch = 89.0f;
         if (m_pitch < -89.0f) m_pitch = -89.0f;
+    }
 
-        // Q/E flying
-        if (m_inputFlyUp)   m_posY += m_devMoveSpeed * dt;
-        if (m_inputFlyDown) m_posY -= m_devMoveSpeed * dt;
+    // 3. Determine Target Velocity (from input)
+    float speed = m_isDeveloperMode ? m_devMoveSpeed : m_moveSpeed;
+    float targetVelX = 0.0f;
+    float targetVelY = 0.0f;
+    float targetVelZ = 0.0f;
 
+    // --- Calculate XZ target velocity (from WASD) ---
+    float dirX = 0.0f, dirZ = 0.0f;
+    if (m_inputForward) { dirX += m_forwardX; dirZ += m_forwardZ; }
+    if (m_inputBackward) { dirX -= m_forwardX; dirZ -= m_forwardZ; }
+    if (m_inputStrafeLeft) { dirX -= m_rightX;   dirZ -= m_rightZ; }
+    if (m_inputStrafeRight) { dirX += m_rightX;   dirZ += m_rightZ; }
+
+    // Normalize XZ direction
+    float len = sqrt(dirX * dirX + dirZ * dirZ);
+    if (len > 0.0001f) {
+        dirX /= len;
+        dirZ /= len;
+    }
+    targetVelX = dirX * speed;
+    targetVelZ = dirZ * speed;
+
+    // --- Calculate Y target velocity (Q/E or Jump Physics) ---
+    if (m_isDeveloperMode) {
+        // Dev mode: Q/E sets target Y velocity
+        if (m_inputFlyUp)   targetVelY = m_devMoveSpeed;
+        else if (m_inputFlyDown) targetVelY = -m_devMoveSpeed;
     }
     else {
-        // --- GAME MODE ---
-        // In game mode, WASD only moves on XZ plane. Y is controlled by physics.
-        // This was already handled above, as we didn't add m_forwardY to the move vector.
-
-        // Handle Jump Physics
+        // Game mode: Jump physics controls Y velocity
         if (m_isJumping) {
-            m_posY += m_velocityY * dt;      // Move vertically
-            m_velocityY += m_gravity * dt; // Apply gravity
-
-            // Check for landing
-            if (m_posY <= m_groundLevel) {
+            m_velY += m_gravity * dt; // Apply gravity
+            if (m_posY <= m_groundLevel && m_velY < 0) { // Check for landing
                 m_posY = m_groundLevel;
                 m_isJumping = false;
-                m_velocityY = 0;
+                m_velY = 0;
             }
         }
         else {
-            // Stick to ground
-            m_posY = m_groundLevel;
+            m_posY = m_groundLevel; // Stick to ground
+            m_velY = 0;
         }
+        // This is the key: targetVelY is set by physics (m_velY), not input.
+        // But in jump(), we set m_velY directly.
+        targetVelY = m_velY;
     }
+
+    // 4. Apply Smoothing (Acceleration/Damping)
+    // Check if there is XZ movement input
+    bool hasXZInput = m_inputForward || m_inputBackward || m_inputStrafeLeft || m_inputStrafeRight;
+    float currentAccel = hasXZInput ? m_acceleration : m_damping;
+
+    // Interpolate current XZ velocity towards target XZ velocity
+    m_velX += (targetVelX - m_velX) * currentAccel * dt;
+    m_velZ += (targetVelZ - m_velZ) * currentAccel * dt;
+
+    // 5. Apply Smoothing for Y (Dev Mode Only)
+    if (m_isDeveloperMode) {
+        bool hasYInput = m_inputFlyUp || m_inputFlyDown;
+        currentAccel = hasYInput ? m_acceleration : m_damping;
+        m_velY += (targetVelY - m_velY) * currentAccel * dt;
+    }
+    // In Game Mode, m_velY is controlled by physics (gravity) directly.
+    // So we don't smooth it, we just use the value calculated in step 3.
+    else {
+        m_velY = targetVelY;
+    }
+
+    // 6. Apply Final Velocity to Position
+    m_posX += m_velX * dt;
+    m_posZ += m_velZ * dt;
+    m_posY += m_velY * dt; // Y position is updated by physics (game) or smoothed velocity (dev)
 }
