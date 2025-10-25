@@ -13,5 +13,9 @@ void drawAxes(float length);
  */
 void drawGrid(float size, int numSegments);
 
-
-// Add other function declarations here later...
+/**
+ * @brief Draws (X, Z) coordinate labels in the center of each grid square.
+ * @param size The total width and depth of the grid (must match drawGrid).
+ * @param numSegments The number of squares (must match drawGrid).
+ */
+void drawGridCoordinates(float size, int numSegments);

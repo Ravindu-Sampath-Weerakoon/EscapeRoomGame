@@ -68,3 +68,60 @@ void drawGrid(float size, int numSegments)
     // Reset color to white
     glColor3f(1.0f, 1.0f, 1.0f);
 }
+
+
+/**
+ * @brief Draws (X, Z) coordinate labels in the center of each grid square.
+ */
+void drawGridCoordinates(float size, int numSegments) {
+    // Disable lighting for the text
+    glDisable(GL_LIGHTING);
+    // Set text color (e.g., yellow for visibility)
+    glColor3f(1.0f, 1.0f, 0.5f);
+
+    float halfSize = size / 2.0f;
+    float segmentSize = size / numSegments;
+    float textYOffset = 0.02f; // Slightly above the grid lines
+
+    // Choose a font (smaller is better for grid labels)
+    void* font = GLUT_BITMAP_HELVETICA_10; // Or GLUT_BITMAP_8_BY_13
+
+    char textBuffer[16]; // Buffer to hold the coordinate string like "(-12,34)"
+
+    // Loop through each grid cell
+    for (int i = 0; i < numSegments; ++i) { // Loop for Z direction
+        for (int j = 0; j < numSegments; ++j) { // Loop for X direction
+
+            // Calculate the coordinates of the *bottom-left* corner of the cell
+            float cellX_BL = -halfSize + (j * segmentSize);
+            float cellZ_BL = -halfSize + (i * segmentSize);
+
+            // Calculate the center coordinates of the cell
+            float centerX = cellX_BL + (segmentSize / 2.0f);
+            float centerZ = cellZ_BL + (segmentSize / 2.0f);
+
+            // Determine the integer grid coordinates
+            // Use floor to correctly handle negative coordinates
+            int gridCoordX = (int)floor(centerX / segmentSize);
+            int gridCoordZ = (int)floor(centerZ / segmentSize);
+
+            // Format the coordinate string using the safer sprintf_s
+            sprintf_s(textBuffer, sizeof(textBuffer), "(%d,%d)", gridCoordX, gridCoordZ);
+
+            // Set the 3D position for the text rasterization
+            glRasterPos3f(centerX, textYOffset, centerZ);
+
+            // Draw the string character by character
+            char* c = textBuffer;
+            while (*c) {
+                glutBitmapCharacter(font, *c);
+                c++;
+            }
+        }
+    }
+
+    // Re-enable lighting
+    glEnable(GL_LIGHTING);
+    // Reset color
+    glColor3f(1.0f, 1.0f, 1.0f);
+}

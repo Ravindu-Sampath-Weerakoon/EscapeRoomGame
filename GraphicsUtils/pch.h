@@ -15,6 +15,7 @@
 // -glut.h must be included after framework.h to avoid conflicts
 
 #include <iostream>
+#include <stdio.h>
 #include "framework.h"
 #include "GraphicsUtils.h"
 #include <glut.h>

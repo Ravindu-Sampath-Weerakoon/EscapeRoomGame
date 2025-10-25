@@ -33,9 +33,11 @@ Camera* g_camera = nullptr;
 // Global Labels Pointer
 Labels* g_labels = nullptr;
 
-
 // Start with axes visible
 bool g_showAxes = true;
+
+// Start with coordinates visible
+bool g_showCoordinates = false;
 
 
 // --- Function Declarations ---
@@ -133,6 +135,12 @@ void display() {
 	}
 
 	drawGrid(40.0f, 40);
+
+	if (g_showCoordinates) {
+		drawGridCoordinates(40.0f, 40);
+	}
+
+
 	// drawRoom(); // Add later
 
 	// --- Draw 2D UI (Labels) ---
@@ -219,6 +227,17 @@ void keyboard(unsigned char key, int x, int y) {
 		return; // Consume 't' key press regardless of mode
 	}
 	// --- END OF MODIFICATION ---
+
+
+	// Toggle Coordinates ('C') - Only in Dev Mode
+	if (key == 'c' || key == 'C') {
+		if (g_camera->isDeveloperMode()) {
+			g_showCoordinates = !g_showCoordinates; // Toggle the boolean
+			printf("DEBUG: Coordinates %s\n", g_showCoordinates ? "ON" : "OFF");
+			glutPostRedisplay(); // Request redraw
+		}
+		return; // Consume 'c' key press regardless of mode
+	}
 
 	// Pass other keys to the camera
 	g_camera->onKeyDown(key);

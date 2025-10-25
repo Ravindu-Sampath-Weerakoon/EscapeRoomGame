@@ -54,10 +54,18 @@ void Labels::draw(bool isDeveloperMode) {
     float x = 10.0f; // 10 pixels from the left
     float y = m_windowHeight - m_lineHeight - 10; // 10 pixels from the top
 
-    // Draw the static hint
-    renderText(x, y, "Press 'P' to switch camera mode");
-    y -= m_lineHeight; // Move down one line
-    renderText(x, y, "Press 'Tab' to show/hide controls");
+    //// Draw the static hint
+    //renderText(x, y, "Press 'P' to switch camera mode");
+    //y -= m_lineHeight; // Move down one line
+
+    if (!m_showHelp) {
+        renderText(x, y, "Press 'Tab' to show controls");
+    }
+    else
+    {
+        renderText(x, y, "Press 'Tab' to hide controls");
+    }
+    
 
     // Draw the dynamic help text if 'Tab' is pressed
     if (m_showHelp) {
@@ -65,21 +73,30 @@ void Labels::draw(bool isDeveloperMode) {
 
         if (isDeveloperMode) {
             glColor3f(1.0f, 0.8f, 0.8f); // Red-ish tint for Dev
-            renderText(x, y, "[DEVELOPER MODE]");
-            y -= m_lineHeight;
+            renderText(x, y, "[ YOU ARE INDEVELOPER MODE ]");
+            y -= m_lineHeight*2;
             glColor3f(1.0f, 1.0f, 0.9f);
-            renderText(x, y, "WASD: Move (Fly)");
+            renderText(x, y, " WASD: Move (Fly)");
             y -= m_lineHeight;
             renderText(x, y, " Q/E: Fly Up/Down");
             y -= m_lineHeight;
-            renderText(x, y, "Arrows: Look Around");
+            renderText(x, y, " Arrows: Look Around");
             y -= m_lineHeight;
-            renderText(x, y, "Shift: Move Faster");
+            renderText(x, y, " Shift: Move Faster");
+            y -= m_lineHeight;
+            renderText(x, y, " T : on/off Axise");
+            y -= m_lineHeight;
+            renderText(x, y, " C : on/off Axise Coordinate");
+
+            y -= m_lineHeight * 2;
+            renderText(x, y, " Press 'P' For Game mode");
         }
         else {
             glColor3f(0.8f, 1.0f, 0.8f); // Green-ish tint for Game
-            renderText(x, y, "[GAME MODE]");
-            y -= m_lineHeight;
+         
+   
+            renderText(x, y, "[ YOU ARE IN GAME MODE ]");
+            y -= m_lineHeight*2;
             glColor3f(1.0f, 1.0f, 0.9f);
             renderText(x, y, " W A S D: Move (Walk)");
             y -= m_lineHeight;
@@ -88,6 +105,10 @@ void Labels::draw(bool isDeveloperMode) {
             renderText(x, y, " Space: Jump");
             y -= m_lineHeight;
             renderText(x, y, " Shift: Sprint(Run)");
+            y -= m_lineHeight*2;
+            renderText(x, y, "Press 'P' For Developer Mode");
+           
+            
         }
     }
 
