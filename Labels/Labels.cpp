@@ -73,7 +73,7 @@ void Labels::draw(bool isDeveloperMode) {
 
         if (isDeveloperMode) {
             glColor3f(1.0f, 0.8f, 0.8f); // Red-ish tint for Dev
-            renderText(x, y, "[ YOU ARE INDEVELOPER MODE ]");
+            renderText(x, y, "[ YOU ARE IN DEVELOPER MODE ]");
             y -= m_lineHeight*2;
             glColor3f(1.0f, 1.0f, 0.9f);
             renderText(x, y, " WASD: Move (Fly)");
