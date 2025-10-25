@@ -76,13 +76,13 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>$(SolutionDir)GraphicsUtils;$(SolutionDir)Dependencies\opengl\include\GL;$(SolutionDir)Cameras;$(SolutionDir)Labels;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)GraphicsUtils;$(SolutionDir)Dependencies\opengl\include\GL;$(SolutionDir)Cameras;$(SolutionDir)Labels;$(SolutionDir)Dependencies\SOIL2\includes;$(SolutionDir)TheRoom;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>$(SolutionDir)$(Configuration)\GraphicsUtils.lib;glu32.lib;glut32.lib;$(SolutionDir)$(Configuration)\Cameras.lib;$(SolutionDir)$(Configuration)\Labels.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>$(SolutionDir)Dependencies\opengl\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>$(SolutionDir)$(Configuration)\GraphicsUtils.lib;glu32.lib;glut32.lib;$(SolutionDir)$(Configuration)\Cameras.lib;$(SolutionDir)$(Configuration)\Labels.lib;soil2-debug.lib;$(SolutionDir)$(Configuration)\TheRoom.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(SolutionDir)Dependencies\opengl\lib;$(SolutionDir)Dependencies\SOIL2\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -105,13 +105,13 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>$(SolutionDir)GraphicsUtils;$(SolutionDir)Dependencies\opengl\include\GL;$(SolutionDir)Cameras;$(SolutionDir)Labels;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)GraphicsUtils;$(SolutionDir)Dependencies\opengl\include\GL;$(SolutionDir)Cameras;$(SolutionDir)Labels;$(SolutionDir)Dependencies\SOIL2\includes;$(SolutionDir)TheRoom;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>$(SolutionDir)$(Configuration)\GraphicsUtils.lib;glu32.lib;glut32.lib;$(SolutionDir)$(Configuration)\Cameras.lib;$(SolutionDir)$(Configuration)\Labels.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>$(SolutionDir)Dependencies\opengl\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>$(SolutionDir)$(Configuration)\GraphicsUtils.lib;glu32.lib;glut32.lib;$(SolutionDir)$(Configuration)\Cameras.lib;$(SolutionDir)$(Configuration)\Labels.lib;soil2-debug.lib;$(SolutionDir)$(Configuration)\TheRoom.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(SolutionDir)Dependencies\opengl\lib;$(SolutionDir)Dependencies\SOIL2\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -140,6 +140,9 @@
     </ProjectReference>
     <ProjectReference Include="..\Labels\Labels.vcxproj">
       <Project>{5621f248-90aa-4a49-970e-46c5ad3ea5e1}</Project>
+    </ProjectReference>
+    <ProjectReference Include="..\TheRoom\TheRoom.vcxproj">
+      <Project>{daf047fc-ab87-43d9-880b-255341ca76c7}</Project>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

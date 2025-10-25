@@ -1,5 +1,6 @@
 #pragma once
 #include "pch.h" // Gets <glut.h>
+#include <glut.h>
 
 // --- Grid Constants ---
 // Use 'extern' for global constants defined elsewhere (in GraphicsUtils.cpp)
@@ -61,3 +62,7 @@ void addBlockGridBox(int gridX, int gridZ);
  * @param gridZ The Z index of the cell (row).
  */
 void removeBlockGridBox(int gridX, int gridZ);
+
+
+//test
+void drawTexturedCube(float size, GLuint textureID);

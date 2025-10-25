@@ -19,6 +19,8 @@
 #include "framework.h"
 #include "GraphicsUtils.h"
 #include <glut.h>
+#include <SOIL2.h>
+
 
 
 #endif //PCH_H

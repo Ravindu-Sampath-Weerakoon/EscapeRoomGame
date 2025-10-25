@@ -16,9 +16,11 @@
 #include "GraphicsUtils.h" // Includes grid constants and collision functions
 #include "Cameras.h"
 #include "Labels.h"
+#include "TheRoom.h"       // <-- Include TheRoom header
 
 //--- OpenGL Libraries ---
 #include <glut.h>
+#include <SOIL2.h> 
 
 // --- Global Variables ---
 int win_width = 1024;
@@ -30,6 +32,7 @@ int g_lastTime = 0;
 // Pointers to module objects
 Camera* g_camera = nullptr;
 Labels* g_labels = nullptr;
+TheRoom* g_room = nullptr; // <-- ADDED: Global TheRoom pointer
 
 // Debug toggle flags
 bool g_showAxes = true;        // Start with axes visible
@@ -39,7 +42,7 @@ bool g_showCoordinates = false; // Start with coordinates hidden
 void display();
 void reshape(int w, int h);
 void init();
-void setupCollisionGrid(); // <-- Declare the new function
+void setupCollisionGrid();
 void idle();
 void keyboard(unsigned char key, int x, int y);
 void keyboardUp(unsigned char key, int x, int y);
@@ -63,9 +66,11 @@ int main(int argc, char** argv) {
 	glutInit(&argc, argv);
 	glutInitDisplayMode(GLUT_DOUBLE | GLUT_DEPTH | GLUT_RGBA | GLUT_MULTISAMPLE); // Request multisampling
 
-	// Create Camera and Labels objects *after* glutInit
+	// Create Module objects *after* glutInit
 	g_camera = new Camera(win_width, win_height);
 	g_labels = new Labels(win_width, win_height);
+	// Create the room
+	g_room = new TheRoom(GRID_SIZE, 5.0f, GRID_SIZE); // <-- ADDED: Create TheRoom object
 
 	// Center the window
 	int screen_width = glutGet(GLUT_SCREEN_WIDTH);
@@ -88,11 +93,11 @@ int main(int argc, char** argv) {
 	glutPassiveMotionFunc(mouseMotion); // For mouse look
 
 	// Configure the Camera's starting state
-	g_camera->setGroundLevel(1.5f);
-	g_camera->setPosition(0.0f, 1.5f, 5.0f);
+	g_camera->setGroundLevel(1.5f); // Player eye height
+	g_camera->setPosition(0.0f, 1.5f, 5.0f); // Start position
 
 	// 3. Call one-time setup functions
-	init();            // OpenGL setup
+	init();            // OpenGL, Lighting setup
 	g_camera->init();  // Camera setup requiring window
 
 	// 4. Start the Main Game Loop
@@ -102,8 +107,10 @@ int main(int argc, char** argv) {
 	// 5. Clean up memory (though MainLoop never exits)
 	delete g_camera;
 	delete g_labels;
+	delete g_room; // <-- ADDED: Delete TheRoom object
 	g_camera = nullptr;
 	g_labels = nullptr;
+	g_room = nullptr; // <-- Set pointer to null
 
 	return 0;
 }
@@ -125,50 +132,59 @@ void setupCollisionGrid() {
 	}
 	printf("Boundary walls marked as blocked.\n");
 
-	// Block specific internal cells
-	addBlockGridBox(4, 11);
-	printf("Internal cell (4, 11) marked as blocked.\n");
-
-	// Add more addBlockGridBox calls here for tables, obstacles etc.
-	// Example: addBlockGridBox(5, 10);
 }
 
 
 // ================================================================
-// Initialize OpenGL Function
+// Initialize OpenGL Function (Focus on Ambient Light)
 // ================================================================
 void init() {
 	glClearColor(0.1f, 0.1f, 0.1f, 1.0f); // Dark grey background
 	glEnable(GL_DEPTH_TEST);              // Enable Z-buffering
-	
-	//not work my pc and universiy pc
-	//glEnable(GL_MULTISAMPLE);             // Enable Antialiasing
+	//glEnable(GL_MULTISAMPLE);             // Enable Antialiasing (if supported)
+	glShadeModel(GL_SMOOTH);              // Nicer lighting interpolation
+	glEnable(GL_NORMALIZE);               // Keep normals unit length
+
+	// --- Lighting Setup ---
+	glEnable(GL_LIGHTING); // Enable lighting calculations
+	glEnable(GL_LIGHT0);   // Enable light source 0
+
+	// 1. GLOBAL AMBIENT: Sets a strong base brightness so shadows aren't black
+	GLfloat global_ambient[] = { 0.5f, 0.5f, 0.5f, 1.0f }; // HIGH AMBIENT FOR VISIBILITY
+	glLightModelfv(GL_LIGHT_MODEL_AMBIENT, global_ambient);
+
+	// 2. Light Source Properties (GL_LIGHT0)
+	GLfloat light_ambient[] = { 0.1f, 0.1f, 0.1f, 1.0f };
+	GLfloat light_diffuse[] = { 1.0f, 1.0f, 1.0f, 1.0f }; // Max direct light color
+	GLfloat light_specular[] = { 0.7f, 0.7f, 0.7f, 1.0f };
+	glLightfv(GL_LIGHT0, GL_AMBIENT, light_ambient);
+	glLightfv(GL_LIGHT0, GL_DIFFUSE, light_diffuse);
+	glLightfv(GL_LIGHT0, GL_SPECULAR, light_specular);
+
+	// --- Material Properties Setup ---
+	glEnable(GL_COLOR_MATERIAL);
+	glColorMaterial(GL_FRONT, GL_AMBIENT_AND_DIFFUSE);
+
+	GLfloat mat_specular[] = { 0.5f, 0.5f, 0.5f, 1.0f };
+	GLfloat mat_shininess = 32.0f;
+	glMaterialfv(GL_FRONT, GL_SPECULAR, mat_specular);
+	glMaterialf(GL_FRONT, GL_SHININESS, mat_shininess);
 
 
-	// 1. Enable Blending (Required for line/polygon smoothing)
-	glEnable(GL_BLEND);
-	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA); // Standard alpha blending
+	glColor3f(1.0f, 1.0f, 1.0f); // Set default draw color to white
 
-	// 2. Enable Line Smoothing
-	glEnable(GL_LINE_SMOOTH);
-	glHint(GL_LINE_SMOOTH_HINT, GL_NICEST); // Ask for best quality (optional)
-
-	// 3. Enable Polygon Smoothing (Use with Caution!)
-	 glEnable(GL_POLYGON_SMOOTH);
-	 glHint(GL_POLYGON_SMOOTH_HINT, GL_NICEST); // Ask for best quality (optional)
-
-
-	// --- Lighting ---
-	glEnable(GL_LIGHTING);
-	glEnable(GL_LIGHT0);                  // Enable light source 0
-	// Add light position/color settings here later
-	// Example: GLfloat light_pos[] = { 0.0f, 5.0f, 0.0f, 1.0f };
-	// glLightfv(GL_LIGHT0, GL_POSITION, light_pos);
-
-	glColor3f(1.0f, 1.0f, 1.0f);          // Set default draw color to white
+	// --- Load Room Textures ---
+	if (g_room) {
+		// We still need to call loadTextures to set up the textures IDs.
+		g_room->loadTextures(
+			"09-01.jpg",
+			"wall.jpg",
+			"wall.jpg"
+		);
+	}
 
 	// --- Collision Grid Setup ---
-	setupCollisionGrid();                 // Call the separate setup function
+	setupCollisionGrid();
 }
 
 // ================================================================
@@ -180,18 +196,28 @@ void display() {
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
 
-	// Apply camera view transformation
+	// Apply camera view transformation FIRST
 	g_camera->applyView();
+
+	// --- Set Light Position ---
+	// Positional light near ceiling center (W=1.0)
+	GLfloat light_pos[] = { 0.0f, 4.5f, 0.0f, 1.0f }; // Centered light
+	glLightfv(GL_LIGHT0, GL_POSITION, light_pos);
+
 
 	// --- Draw 3D Scene ---
 	if (g_showAxes) {
-		drawAxes(GRID_HALF_SIZE); // Use grid constant for size
+		drawAxes(GRID_HALF_SIZE);
 	}
-	drawGrid(GRID_SIZE, GRID_SEGMENTS); // Use grid constants
+	drawGrid(GRID_SIZE, GRID_SEGMENTS); // Draw grid for visual floor
 	if (g_showCoordinates) {
-		drawGridCoordinates(GRID_SIZE, GRID_SEGMENTS); // Use grid constants
+		drawGridCoordinates(GRID_SIZE, GRID_SEGMENTS);
 	}
-	// drawRoom(); // Add later
+
+	// --- Draw TheRoom ---
+	if (g_room) {
+		g_room->draw(); // <-- Draw the room geometry (includes floor, walls, ceiling)
+	}
 
 	// --- Draw 2D UI (Labels) ---
 	g_labels->draw(g_camera->isDeveloperMode());
@@ -206,13 +232,13 @@ void display() {
 void reshape(int w, int h) {
 	win_width = w;
 	win_height = h;
-	if (h == 0) h = 1; // Prevent division by zero
+	if (h == 0) h = 1;
 
 	glViewport(0, 0, w, h);
 
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
-	gluPerspective(60.0, (float)w / h, 0.1, 100.0); // Field of View, Aspect Ratio, Near, Far
+	gluPerspective(60.0, (float)w / h, 0.1, 100.0); // FOV, Aspect, Near, Far
 
 	// Notify modules of resize
 	g_camera->onWindowResize(w, h);
@@ -226,7 +252,7 @@ void idle() {
 	// Calculate Delta-Time (dt)
 	int currentTime = glutGet(GLUT_ELAPSED_TIME);
 	float dt = (currentTime - g_lastTime) / 1000.0f; // Time in seconds
-	if (dt > 0.1f) dt = 0.1f; // Clamp dt to prevent large jumps
+	if (dt > 0.1f) dt = 0.1f; // Clamp dt
 	g_lastTime = currentTime;
 
 	// Update Camera (handles movement, physics, smoothing, collision)
@@ -242,13 +268,14 @@ void idle() {
 // ================================================================
 
 void keyboard(unsigned char key, int x, int y) {
-	// Update modifiers FIRST in every input callback (EXCEPT mouseMotion)
+	// IMPORTANT: Update modifiers FIRST in key/special callbacks
 	g_camera->updateModifiers(glutGetModifiers());
 
 	if (key == 27) { // ESC Key
 		printf("ESC key pressed. Exiting.\n");
 		delete g_camera;
 		delete g_labels;
+		delete g_room; // Clean up room
 		exit(0);
 	}
 	if (key == '\t') { // Tab Key

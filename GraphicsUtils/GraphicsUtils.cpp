@@ -166,3 +166,78 @@ void removeBlockGridBox(int gridX, int gridZ) {
         printf("Warning: Attempted to unblock invalid grid cell (%d, %d)\n", gridX, gridZ);
     }
 }
+
+
+void drawTexturedCube(float size, GLuint textureID) {
+    if (textureID == 0) {
+        // Fallback: Draw a simple pink cube if texture failed to load
+        glDisable(GL_TEXTURE_2D);
+        glDisable(GL_LIGHTING);
+        glColor3f(1.0f, 0.0f, 1.0f);
+        glutSolidCube(size);
+        glEnable(GL_LIGHTING);
+        glColor3f(1.0f, 1.0f, 1.0f);
+        return;
+    }
+    
+
+    float halfSize = size / 2.0f;
+
+    // Set material color to white (for GL_MODULATE)
+    glColor3f(1.0f, 1.0f, 1.0f);
+
+    // Enable texturing and bind the provided texture
+    glEnable(GL_TEXTURE_2D);
+    glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE); // Use modulate to see lighting
+    glBindTexture(GL_TEXTURE_2D, textureID);
+
+    glBegin(GL_QUADS);
+    // Front Face (+Z)
+    glNormal3f(0.0f, 0.0f, 1.0f);
+    glTexCoord2f(0.0f, 0.0f); glVertex3f(-halfSize, -halfSize, halfSize);
+    glTexCoord2f(1.0f, 0.0f); glVertex3f(halfSize, -halfSize, halfSize);
+    glTexCoord2f(1.0f, 1.0f); glVertex3f(halfSize, halfSize, halfSize);
+    glTexCoord2f(0.0f, 1.0f); glVertex3f(-halfSize, halfSize, halfSize);
+
+    // Back Face (-Z)
+    glNormal3f(0.0f, 0.0f, -1.0f);
+    glTexCoord2f(1.0f, 0.0f); glVertex3f(-halfSize, -halfSize, -halfSize);
+    glTexCoord2f(1.0f, 1.0f); glVertex3f(-halfSize, halfSize, -halfSize);
+    glTexCoord2f(0.0f, 1.0f); glVertex3f(halfSize, halfSize, -halfSize);
+    glTexCoord2f(0.0f, 0.0f); glVertex3f(halfSize, -halfSize, -halfSize);
+
+    // Top Face (+Y)
+    glNormal3f(0.0f, 1.0f, 0.0f);
+    glTexCoord2f(0.0f, 1.0f); glVertex3f(-halfSize, halfSize, -halfSize);
+    glTexCoord2f(0.0f, 0.0f); glVertex3f(-halfSize, halfSize, halfSize);
+    glTexCoord2f(1.0f, 0.0f); glVertex3f(halfSize, halfSize, halfSize);
+    glTexCoord2f(1.0f, 1.0f); glVertex3f(halfSize, halfSize, -halfSize);
+
+    // Bottom Face (-Y)
+    glNormal3f(0.0f, -1.0f, 0.0f);
+    glTexCoord2f(1.0f, 1.0f); glVertex3f(-halfSize, -halfSize, -halfSize);
+    glTexCoord2f(0.0f, 1.0f); glVertex3f(halfSize, -halfSize, -halfSize);
+    glTexCoord2f(0.0f, 0.0f); glVertex3f(halfSize, -halfSize, halfSize);
+    glTexCoord2f(1.0f, 0.0f); glVertex3f(-halfSize, -halfSize, halfSize);
+
+    // Right face (+X)
+    glNormal3f(1.0f, 0.0f, 0.0f);
+    glTexCoord2f(1.0f, 0.0f); glVertex3f(halfSize, -halfSize, -halfSize);
+    glTexCoord2f(1.0f, 1.0f); glVertex3f(halfSize, halfSize, -halfSize);
+    glTexCoord2f(0.0f, 1.0f); glVertex3f(halfSize, halfSize, halfSize);
+    glTexCoord2f(0.0f, 0.0f); glVertex3f(halfSize, -halfSize, halfSize);
+
+    // Left Face (-X)
+    glNormal3f(-1.0f, 0.0f, 0.0f);
+    glTexCoord2f(0.0f, 0.0f); glVertex3f(-halfSize, -halfSize, -halfSize);
+    glTexCoord2f(1.0f, 0.0f); glVertex3f(-halfSize, -halfSize, halfSize);
+    glTexCoord2f(1.0f, 1.0f); glVertex3f(-halfSize, halfSize, halfSize);
+    glTexCoord2f(0.0f, 1.0f); glVertex3f(-halfSize, halfSize, -halfSize);
+    glEnd();
+
+    // Cleanup
+    glBindTexture(GL_TEXTURE_2D, 0);
+    glDisable(GL_TEXTURE_2D);
+
+   
+}
