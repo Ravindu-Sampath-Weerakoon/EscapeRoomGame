@@ -178,6 +178,38 @@ void init() {
 	glEnable(GL_LIGHT0); // Enable light source 0
 	// You might add light position/color settings here later
 
+
+
+	printf("Initializing collision grid...\n"); // Debug message
+
+	// --- Block the Boundary Walls ---
+	for (int i = 0; i < GRID_SEGMENTS; ++i) {
+		// Block Left Wall (X=0, all Z)
+		addBlockGridBox(0, i);
+
+		// Block Right Wall (X=GRID_SEGMENTS-1, all Z)
+		addBlockGridBox(GRID_SEGMENTS - 1, i);
+
+		// Block Back Wall (Z=0, all X, excluding corners already done)
+		if (i > 0 && i < GRID_SEGMENTS - 1) {
+			addBlockGridBox(i, 0);
+		}
+
+		// Block Front Wall (Z=GRID_SEGMENTS-1, all X, excluding corners already done)
+		if (i > 0 && i < GRID_SEGMENTS - 1) {
+			addBlockGridBox(i, GRID_SEGMENTS - 1);
+		}
+	}
+	printf("Boundary walls marked as blocked.\n"); // Debug message
+
+	// --- You can still block specific internal cells ---
+	// Example: Block cell (4, 11)
+	addBlockGridBox(4, 11);
+	printf("Internal cell (4, 11) marked as blocked.\n"); // Debug message
+
+
+
+
 	glColor3f(1.0f, 1.0f, 1.0f); // Set default draw color to white
 }
 

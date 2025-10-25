@@ -9,8 +9,13 @@
 // ---------------------------------------------
 
 #include "Cameras.h" // Include your own header
+#include "GraphicsUtils.h" // <-- Include for collision functions
 #include <stdio.h> // For printf
-#include <math.h> // For sqrt
+#include <math.h> // For sqrt, cos, sin, fabs
+
+// --- Collision Padding ---
+const float CAMERA_COLLISION_PADDING = 0.2f; // How far camera stops from blocked cell edge
+
 
 Camera::Camera(int windowWidth, int windowHeight) {
     onWindowResize(windowWidth, windowHeight); // Set up window dimensions
@@ -49,7 +54,7 @@ Camera::Camera(int windowWidth, int windowHeight) {
     m_velZ = 0.0f;
 
     // === ADDED FOR SPRINTING ===
-    m_sprintMultiplier = 2.5f;       // The speed boost (Set to 5x)
+    m_sprintMultiplier = 5.0f;       // The speed boost (Set to 5x as requested)
     m_currentSpeedMultiplier = 1.0f; // Start at normal speed (1.0x)
     m_sprintAcceleration = 10.0f;    // How fast to speed up/slow down sprint
     m_inputSprint = false; // Will be updated by GetAsyncKeyState
@@ -63,7 +68,6 @@ Camera::Camera(int windowWidth, int windowHeight) {
 // This is the new function that gets called from main()
 void Camera::init() {
     // Hide cursor for game mode
-    // We do this here because glut has been initialized.
     if (!m_isDeveloperMode) {
         glutSetCursor(GLUT_CURSOR_NONE);
         centerMouse(); // Center mouse initially in game mode
@@ -98,7 +102,6 @@ void Camera::recalculateVectors() {
     m_forwardZ = -cos(pitchRad) * cos(yawRad);
 
     // Calculate the Right vector (Cross product of Forward and World Up)
-    // World Up is (0, 1, 0)
     m_rightX = -m_forwardZ; // Corrected sign
     m_rightY = 0;
     m_rightZ = m_forwardX;  // Corrected sign
@@ -110,7 +113,6 @@ void Camera::recalculateVectors() {
         m_rightZ /= len;
     }
     else {
-        // Handle case where forward is pointing straight up or down
         m_rightX = cos(yawRad);
         m_rightZ = sin(yawRad);
     }
@@ -118,7 +120,7 @@ void Camera::recalculateVectors() {
 
 void Camera::toggleMode() {
     m_isDeveloperMode = !m_isDeveloperMode;
-    m_firstMouse = true; // Reset mouse on mode toggle
+    m_firstMouse = true;
 
     if (m_isDeveloperMode) {
         printf("Camera: Developer Mode ENABLED\n");
@@ -209,8 +211,11 @@ void Camera::onMouseMovement(int x, int y) {
         return;
     }
     if (m_firstMouse) {
-        if (x == m_windowCenterX && y == m_windowCenterY) {
+        if (abs(x - m_windowCenterX) < 5 && abs(y - m_windowCenterY) < 5) {
             m_firstMouse = false;
+        }
+        else {
+            centerMouse();
         }
         return;
     }
@@ -218,7 +223,7 @@ void Camera::onMouseMovement(int x, int y) {
     float deltaX = (float)(x - m_windowCenterX);
     float deltaY = (float)(m_windowCenterY - y);
 
-    if (fabs(deltaX) < 0.1f && fabs(deltaY) < 0.1f) {
+    if (fabs(deltaX) < 1.0f && fabs(deltaY) < 1.0f) {
         centerMouse();
         return;
     }
@@ -232,13 +237,9 @@ void Camera::onMouseMovement(int x, int y) {
     centerMouse();
 }
 
-// This function is now OPTIONAL if using GetAsyncKeyState in update()
+// This function is now OPTIONAL
 void Camera::updateModifiers(int modifiers) {
-    // This function can be kept for compatibility or removed if
-    // GetAsyncKeyState is handling the sprint check in update().
-    // bool newSprintState = (modifiers & GLUT_ACTIVE_SHIFT);
-    // m_inputSprint = newSprintState; // This would be overridden by update()
-    //printf("DEBUG: updateModifiers called (optional).\n"); // Add this if you want to see if it's still being called
+    // printf("DEBUG: updateModifiers called (optional).\n");
 }
 
 
@@ -249,47 +250,39 @@ void Camera::jump() {
 }
 
 // ================================================================
-// Camera Update Function (Uses GetAsyncKeyState for Instant Sprint)
+// Camera Update Function (Includes Grid Collision)
 // ================================================================
 void Camera::update(float dt) {
     // Prevent huge jumps if dt is abnormally large
     if (dt > 0.1f) dt = 0.1f;
 
     // --- 1. CHECK SPRINT KEY (WINDOWS VERSION) ---
-    m_inputSprint = false; // Assume not sprinting by default
+    m_inputSprint = false;
 #ifdef _WIN32
-    // Check if the Left Shift key is currently held down
-    // (0x8000 is the bit flag for "currently pressed")
     if (GetAsyncKeyState(VK_LSHIFT) & 0x8000) {
         m_inputSprint = true;
     }
-    // Optional: Check Right Shift too
-    // if (GetAsyncKeyState(VK_RSHIFT) & 0x8000) {
-    //     m_inputSprint = true;
-    // }
 #endif
-    // ---------------------------------------------
 
-    // 2. SMOOTH THE SPEED MULTIPLIER (Sprint)
+    // --- 2. SMOOTH THE SPEED MULTIPLIER (Sprint) ---
     float targetMultiplier = m_inputSprint ? m_sprintMultiplier : 1.0f;
     m_currentSpeedMultiplier += (targetMultiplier - m_currentSpeedMultiplier) * m_sprintAcceleration * dt;
 
-    // 3. Recalculate orientation vectors (based on yaw/pitch)
+    // --- 3. Recalculate orientation vectors ---
     recalculateVectors();
 
-    // 4. Handle Look (Dev Mode - Arrow Keys)
+    // --- 4. Handle Look (Dev Mode - Arrow Keys) ---
     if (m_isDeveloperMode) {
         if (m_inputLookLeft)  m_yaw -= m_lookSpeed * dt;
         if (m_inputLookRight) m_yaw += m_lookSpeed * dt;
         if (m_inputLookUp)    m_pitch += m_lookSpeed * dt;
         if (m_inputLookDown)  m_pitch -= m_lookSpeed * dt;
-
         // Clamp pitch
         if (m_pitch > 89.0f)  m_pitch = 89.0f;
         if (m_pitch < -89.0f) m_pitch = -89.0f;
     }
 
-    // 5. Determine Target Velocity (Based on Input & Mode)
+    // --- 5. Determine Target Velocity (Based on Input & Mode) ---
     float baseSpeed = m_isDeveloperMode ? m_devMoveSpeed : m_moveSpeed;
     float currentSpeed = baseSpeed * m_currentSpeedMultiplier; // Apply sprint
 
@@ -299,12 +292,11 @@ void Camera::update(float dt) {
 
     // --- XZ Target Velocity (WASD) ---
     float moveDirX = 0.0f, moveDirZ = 0.0f;
-    if (m_inputForward)   { moveDirX += m_forwardX; moveDirZ += m_forwardZ; }
-    if (m_inputBackward)  { moveDirX -= m_forwardX; moveDirZ -= m_forwardZ; }
-    if (m_inputStrafeLeft)  { moveDirX -= m_rightX;   moveDirZ -= m_rightZ;   }
-    if (m_inputStrafeRight) { moveDirX += m_rightX;   moveDirZ += m_rightZ;   }
+    if (m_inputForward) { moveDirX += m_forwardX; moveDirZ += m_forwardZ; }
+    if (m_inputBackward) { moveDirX -= m_forwardX; moveDirZ -= m_forwardZ; }
+    if (m_inputStrafeLeft) { moveDirX -= m_rightX;   moveDirZ -= m_rightZ; }
+    if (m_inputStrafeRight) { moveDirX += m_rightX;   moveDirZ += m_rightZ; }
 
-    // Normalize XZ direction vector if there's movement
     float moveLen = sqrt(moveDirX * moveDirX + moveDirZ * moveDirZ);
     if (moveLen > 0.0001f) {
         moveDirX /= moveLen;
@@ -315,49 +307,89 @@ void Camera::update(float dt) {
 
     // --- Y Target Velocity (Q/E or Jump Physics) ---
     if (m_isDeveloperMode) {
-        // Dev mode: Q/E sets target Y velocity directly
-        if (m_inputFlyUp)       targetVelY = currentSpeed; // Sprint affects flying speed
+        if (m_inputFlyUp)       targetVelY = currentSpeed;
         else if (m_inputFlyDown) targetVelY = -currentSpeed;
         else                     targetVelY = 0.0f;
-    } else {
-        // Game mode: Jump physics controls Y velocity
+    }
+    else { // Game Mode Physics
         if (m_isJumping) {
-            m_velY += m_gravity * dt; // Apply gravity to current velocity
-            // Check for landing (only if moving downwards)
+            m_velY += m_gravity * dt;
             if (m_posY <= m_groundLevel && m_velY < 0.0f) {
-                m_posY = m_groundLevel; // Snap to ground
-                m_isJumping = false;
-                m_velY = 0;         // Stop vertical velocity
+                // Landed - Handled below in collision/position update
             }
-        } else {
-            // Not jumping: ensure player stays on ground
-            m_posY = m_groundLevel;
-            m_velY = 0;
         }
-        targetVelY = m_velY; // Target Y velocity *is* the physics velocity
+        else {
+            m_velY = 0; // Ensure Y velocity is zero when grounded
+        }
+        targetVelY = m_velY; // Target for Y is directly from physics
     }
 
-    // 6. Apply Smoothing (Lerp current velocity towards target velocity)
+    // --- 6. Apply Velocity Smoothing (Lerp) ---
     bool hasXZInput = moveLen > 0.0001f;
     float currentAccel = hasXZInput ? m_acceleration : m_damping;
 
     m_velX += (targetVelX - m_velX) * currentAccel * dt;
     m_velZ += (targetVelZ - m_velZ) * currentAccel * dt;
 
-    // Apply Y smoothing only in Dev Mode
-    if (m_isDeveloperMode) {
+    if (m_isDeveloperMode) { // Smooth Y only in dev mode
         bool hasYInput = m_inputFlyUp || m_inputFlyDown;
         currentAccel = hasYInput ? m_acceleration : m_damping;
         m_velY += (targetVelY - m_velY) * currentAccel * dt;
     }
-    // In Game Mode, m_velY is already set by physics, no smoothing needed.
-    else {
+    else { // In Game Mode, physics already updated m_velY
         m_velY = targetVelY;
     }
 
+    // --- 7. Calculate Potential Next Position ---
+    float potentialNextX = m_posX + m_velX * dt;
+    float potentialNextZ = m_posZ + m_velZ * dt;
+    float potentialNextY = m_posY + m_velY * dt;
 
-    // 7. Apply Final Velocity to Position
-    m_posX += m_velX * dt;
-    m_posZ += m_velZ * dt;
-    m_posY += m_velY * dt; // Apply calculated Y velocity
-}
+    // --- 8. Check Grid Collision (Game Mode Only) ---
+    if (!m_isDeveloperMode) {
+        // --- Check X-Axis ---
+        float checkX = m_posX + (m_velX > 0 ? CAMERA_COLLISION_PADDING : -CAMERA_COLLISION_PADDING) + m_velX * dt;
+        if (isGridPositionBlocked(checkX, m_posZ)) {
+            // printf("DEBUG: Collision X at (%.2f, %.2f)\n", checkX, m_posZ); // Optional debug
+            m_velX = 0;
+            potentialNextX = m_posX; // Stop movement on this axis
+        }
+
+        // --- Check Z-Axis ---
+        // Use the potentially already adjusted potentialNextX for the check
+        float checkZ = m_posZ + (m_velZ > 0 ? CAMERA_COLLISION_PADDING : -CAMERA_COLLISION_PADDING) + m_velZ * dt;
+        if (isGridPositionBlocked(potentialNextX, checkZ)) {
+            // printf("DEBUG: Collision Z at (%.2f, %.2f)\n", potentialNextX, checkZ); // Optional debug
+            m_velZ = 0;
+            potentialNextZ = m_posZ; // Stop movement on this axis
+        }
+
+        // --- Handle Y-Axis Landing (Part of Collision/Response) ---
+        if (m_isJumping && potentialNextY <= m_groundLevel && m_velY < 0.0f) {
+            potentialNextY = m_groundLevel;
+            m_isJumping = false;
+            m_velY = 0;
+        }
+        else if (!m_isJumping) {
+            potentialNextY = m_groundLevel; // Keep snapped to ground if not jumping
+            m_velY = 0;
+        }
+        // (Ceiling collision could be added here if needed)
+
+    } // End if (!m_isDeveloperMode)
+
+
+    // --- 9. Apply Final Position ---
+    m_posX = potentialNextX;
+    m_posY = potentialNextY;
+    m_posZ = potentialNextZ;
+
+    // Final safety check for ground level in game mode
+    if (!m_isDeveloperMode && m_posY < m_groundLevel) {
+        m_posY = m_groundLevel;
+        if (m_isJumping) { // Ensure jumping stops if forced to ground
+            m_isJumping = false;
+            m_velY = 0;
+        }
+    }
+} // End Camera::update
