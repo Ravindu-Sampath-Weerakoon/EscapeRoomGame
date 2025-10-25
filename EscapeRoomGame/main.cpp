@@ -10,13 +10,13 @@
 
 // --- Standard libraries ---
 #include <iostream>
-#include <stdio.h> // For printf
+#include <stdio.h> 
 
 // --- Your Custom Game Modules ---
-#include "GraphicsUtils.h" // Includes grid constants and collision functions
+#include "GraphicsUtils.h"
 #include "Cameras.h"
 #include "Labels.h"
-#include "TheRoom.h"       // <-- Include TheRoom header
+#include "TheRoom.h"
 
 //--- OpenGL Libraries ---
 #include <glut.h>
@@ -32,11 +32,11 @@ int g_lastTime = 0;
 // Pointers to module objects
 Camera* g_camera = nullptr;
 Labels* g_labels = nullptr;
-TheRoom* g_room = nullptr; // <-- ADDED: Global TheRoom pointer
+TheRoom* g_room = nullptr;
 
 // Debug toggle flags
-bool g_showAxes = true;        // Start with axes visible
-bool g_showCoordinates = false; // Start with coordinates hidden
+bool g_showAxes = true;
+bool g_showCoordinates = false;
 
 // --- Function Declarations ---
 void display();
@@ -64,13 +64,13 @@ int main(int argc, char** argv) {
 
 	// 1. Initialize GLUT
 	glutInit(&argc, argv);
-	glutInitDisplayMode(GLUT_DOUBLE | GLUT_DEPTH | GLUT_RGBA | GLUT_MULTISAMPLE); // Request multisampling
+	// Request multisampling (keep this request unless you know the hardware hates it)
+	glutInitDisplayMode(GLUT_DOUBLE | GLUT_DEPTH | GLUT_RGBA | GLUT_MULTISAMPLE);
 
 	// Create Module objects *after* glutInit
 	g_camera = new Camera(win_width, win_height);
 	g_labels = new Labels(win_width, win_height);
-	// Create the room
-	g_room = new TheRoom(GRID_SIZE, 5.0f, GRID_SIZE); // <-- ADDED: Create TheRoom object
+	g_room = new TheRoom(GRID_SIZE, 5.0f, GRID_SIZE);
 
 	// Center the window
 	int screen_width = glutGet(GLUT_SCREEN_WIDTH);
@@ -93,24 +93,24 @@ int main(int argc, char** argv) {
 	glutPassiveMotionFunc(mouseMotion); // For mouse look
 
 	// Configure the Camera's starting state
-	g_camera->setGroundLevel(1.5f); // Player eye height
-	g_camera->setPosition(0.0f, 1.5f, 5.0f); // Start position
+	g_camera->setGroundLevel(1.5f);
+	g_camera->setPosition(0.0f, 1.5f, 5.0f);
 
 	// 3. Call one-time setup functions
-	init();            // OpenGL, Lighting setup
-	g_camera->init();  // Camera setup requiring window
+	init();
+	g_camera->init();
 
 	// 4. Start the Main Game Loop
-	g_lastTime = glutGet(GLUT_ELAPSED_TIME); // Init timer for dt
+	g_lastTime = glutGet(GLUT_ELAPSED_TIME);
 	glutMainLoop();
 
-	// 5. Clean up memory (though MainLoop never exits)
+	// 5. Clean up memory
 	delete g_camera;
 	delete g_labels;
-	delete g_room; // <-- ADDED: Delete TheRoom object
+	delete g_room;
 	g_camera = nullptr;
 	g_labels = nullptr;
-	g_room = nullptr; // <-- Set pointer to null
+	g_room = nullptr;
 
 	return 0;
 }
@@ -132,54 +132,51 @@ void setupCollisionGrid() {
 	}
 	printf("Boundary walls marked as blocked.\n");
 
+	// Block specific internal cells
+	addBlockGridBox(4, 11);
+	printf("Internal cell (4, 11) marked as blocked.\n");
 }
 
 
 // ================================================================
-// Initialize OpenGL Function (Focus on Ambient Light)
-// ================================================================
+// Initialize OpenGL Function (Optimized & Ambient Lighting)
+// =================================================================
 void init() {
 	glClearColor(0.1f, 0.1f, 0.1f, 1.0f); // Dark grey background
-	glEnable(GL_DEPTH_TEST);              // Enable Z-buffering
-	//glEnable(GL_MULTISAMPLE);             // Enable Antialiasing (if supported)
-	glShadeModel(GL_SMOOTH);              // Nicer lighting interpolation
-	glEnable(GL_NORMALIZE);               // Keep normals unit length
+	glEnable(GL_DEPTH_TEST);
 
-	// --- Lighting Setup ---
-	glEnable(GL_LIGHTING); // Enable lighting calculations
-	glEnable(GL_LIGHT0);   // Enable light source 0
+	// --- OPTIMIZATION: Use GL_MULTISAMPLE if available ---
+	glEnable(GLUT_MULTISAMPLE);
+	// Fallback: If this line causes lag, comment it out. Do not use older GL_LINE_SMOOTH/GL_POLYGON_SMOOTH.
 
-	// 1. GLOBAL AMBIENT: Sets a strong base brightness so shadows aren't black
-	GLfloat global_ambient[] = { 0.5f, 0.5f, 0.5f, 1.0f }; // HIGH AMBIENT FOR VISIBILITY
+	glShadeModel(GL_SMOOTH);
+	glEnable(GL_NORMALIZE);
+
+	// --- Lighting Setup (Ambient Only) ---
+	glEnable(GL_LIGHTING);
+	glDisable(GL_LIGHT0); // Turn off direct light
+
+	// 1. GLOBAL AMBIENT: HIGH AMBIENT FOR VISIBILITY (The only light source)
+	GLfloat global_ambient[] = { 0.5f, 0.5f, 0.5f, 1.0f };
 	glLightModelfv(GL_LIGHT_MODEL_AMBIENT, global_ambient);
-
-	// 2. Light Source Properties (GL_LIGHT0)
-	GLfloat light_ambient[] = { 0.1f, 0.1f, 0.1f, 1.0f };
-	GLfloat light_diffuse[] = { 1.0f, 1.0f, 1.0f, 1.0f }; // Max direct light color
-	GLfloat light_specular[] = { 0.7f, 0.7f, 0.7f, 1.0f };
-	glLightfv(GL_LIGHT0, GL_AMBIENT, light_ambient);
-	glLightfv(GL_LIGHT0, GL_DIFFUSE, light_diffuse);
-	glLightfv(GL_LIGHT0, GL_SPECULAR, light_specular);
 
 	// --- Material Properties Setup ---
 	glEnable(GL_COLOR_MATERIAL);
 	glColorMaterial(GL_FRONT, GL_AMBIENT_AND_DIFFUSE);
 
-	GLfloat mat_specular[] = { 0.5f, 0.5f, 0.5f, 1.0f };
-	GLfloat mat_shininess = 32.0f;
+	GLfloat mat_specular[] = { 0.0f, 0.0f, 0.0f, 1.0f };
+	GLfloat mat_shininess = 0.0f;
 	glMaterialfv(GL_FRONT, GL_SPECULAR, mat_specular);
 	glMaterialf(GL_FRONT, GL_SHININESS, mat_shininess);
-
 
 	glColor3f(1.0f, 1.0f, 1.0f); // Set default draw color to white
 
 	// --- Load Room Textures ---
 	if (g_room) {
-		// We still need to call loadTextures to set up the textures IDs.
 		g_room->loadTextures(
-			"09-01.jpg",
-			"wall.jpg",
-			"wall.jpg"
+			"textures/floor.dds",
+			"textures/wall.dds",
+			"textures/ceiling.dds"
 		);
 	}
 
@@ -196,33 +193,29 @@ void display() {
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
 
-	// Apply camera view transformation FIRST
 	g_camera->applyView();
 
-	// --- Set Light Position ---
-	// Positional light near ceiling center (W=1.0)
-	GLfloat light_pos[] = { 0.0f, 4.5f, 0.0f, 1.0f }; // Centered light
-	glLightfv(GL_LIGHT0, GL_POSITION, light_pos);
-
-
 	// --- Draw 3D Scene ---
+	// The Light Position setup is removed as GL_LIGHT0 is disabled.
+
 	if (g_showAxes) {
 		drawAxes(GRID_HALF_SIZE);
 	}
-	drawGrid(GRID_SIZE, GRID_SEGMENTS); // Draw grid for visual floor
+	// --- OPTIMIZATION: drawGrid is intentionally excluded here ---
+	// If g_showCoordinates is on, we draw the coordinates AND the grid lines
 	if (g_showCoordinates) {
+		drawGrid(GRID_SIZE, GRID_SEGMENTS); // Only draw grid if coordinates are toggled
 		drawGridCoordinates(GRID_SIZE, GRID_SEGMENTS);
 	}
 
-	// --- Draw TheRoom ---
+	// Draw TheRoom
 	if (g_room) {
-		g_room->draw(); // <-- Draw the room geometry (includes floor, walls, ceiling)
+		g_room->draw(); // This is the main geometry, now optimized with low texture repeat.
 	}
 
 	// --- Draw 2D UI (Labels) ---
 	g_labels->draw(g_camera->isDeveloperMode());
 
-	// Swap buffers to show the drawn frame
 	glutSwapBuffers();
 }
 
@@ -238,7 +231,7 @@ void reshape(int w, int h) {
 
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
-	gluPerspective(60.0, (float)w / h, 0.1, 100.0); // FOV, Aspect, Near, Far
+	gluPerspective(60.0, (float)w / h, 0.1, 100.0);
 
 	// Notify modules of resize
 	g_camera->onWindowResize(w, h);
@@ -251,8 +244,8 @@ void reshape(int w, int h) {
 void idle() {
 	// Calculate Delta-Time (dt)
 	int currentTime = glutGet(GLUT_ELAPSED_TIME);
-	float dt = (currentTime - g_lastTime) / 1000.0f; // Time in seconds
-	if (dt > 0.1f) dt = 0.1f; // Clamp dt
+	float dt = (currentTime - g_lastTime) / 1000.0f;
+	if (dt > 0.1f) dt = 0.1f;
 	g_lastTime = currentTime;
 
 	// Update Camera (handles movement, physics, smoothing, collision)
@@ -275,12 +268,12 @@ void keyboard(unsigned char key, int x, int y) {
 		printf("ESC key pressed. Exiting.\n");
 		delete g_camera;
 		delete g_labels;
-		delete g_room; // Clean up room
+		delete g_room;
 		exit(0);
 	}
 	if (key == '\t') { // Tab Key
 		g_labels->toggleHelp();
-		return; // Consume the Tab key
+		return;
 	}
 	// Toggle Axes ('T') - Dev Mode Only
 	if (key == 't' || key == 'T') {
@@ -289,7 +282,7 @@ void keyboard(unsigned char key, int x, int y) {
 			printf("DEBUG: Axes %s\n", g_showAxes ? "ON" : "OFF");
 			glutPostRedisplay();
 		}
-		return; // Consume 't' key
+		return;
 	}
 	// Toggle Coordinates ('C') - Dev Mode Only
 	if (key == 'c' || key == 'C') {
@@ -298,7 +291,7 @@ void keyboard(unsigned char key, int x, int y) {
 			printf("DEBUG: Coordinates %s\n", g_showCoordinates ? "ON" : "OFF");
 			glutPostRedisplay();
 		}
-		return; // Consume 'c' key
+		return;
 	}
 
 	// Pass other keys to the camera

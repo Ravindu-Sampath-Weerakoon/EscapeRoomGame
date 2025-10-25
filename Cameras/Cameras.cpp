@@ -34,7 +34,7 @@ Camera::Camera(int windowWidth, int windowHeight) {
     m_inputFlyUp = m_inputFlyDown = false;
 
     // Set speeds
-    m_moveSpeed = 3.0f;   // units per second
+    m_moveSpeed = 2.5f;   // units per second
     m_devMoveSpeed = 8.0f; // Dev mode is faster
     m_lookSpeed = 90.0f;  // degrees per second
     m_mouseSensitivity = 0.1f;
@@ -54,9 +54,9 @@ Camera::Camera(int windowWidth, int windowHeight) {
     m_velZ = 0.0f;
 
     // === ADDED FOR SPRINTING ===
-    m_sprintMultiplier = 5.0f;       // The speed boost (Set to 5x as requested)
+    m_sprintMultiplier = 2.5f;       // The speed boost (Set to 5x as requested)
     m_currentSpeedMultiplier = 1.0f; // Start at normal speed (1.0x)
-    m_sprintAcceleration = 10.0f;    // How fast to speed up/slow down sprint
+    m_sprintAcceleration = 8.0f;    // How fast to speed up/slow down sprint
     m_inputSprint = false; // Will be updated by GetAsyncKeyState
 
     // Calculate initial vectors

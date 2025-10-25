@@ -1,8 +1,9 @@
 #pragma once
 #include "pch.h" // Includes <glut.h>
 
-class TheRoom { // <-- Renamed to TheRoom
+class TheRoom {
 public:
+    // Constructor: Define room dimensions
     TheRoom(float width, float height, float depth);
 
     bool loadTextures(const char* floorTexPath, const char* wallTexPath, const char* ceilingTexPath);
@@ -18,10 +19,15 @@ private:
     GLuint m_texCeiling;
 
     // Internal Drawing Functions
-    void drawFloor();   // <-- NEW
-    void drawWalls();   // <-- NEW
-    void drawCeiling(); // <-- NEW
+    void drawFloor();
+    void drawWalls();
+    void drawCeiling();
 
+    // Internal Texture Management
     GLuint loadSingleTexture(const char* path);
-    GLuint createCheckerboardTexture(int width, int height, int checkSize);
+    // GLuint createCheckerboardTexture(int width, int height, int checkSize); // (Optional, depending on implementation)
+
+    // ADD THESE NEW HELPER DECLARATIONS
+    void bindAndCheckTexture(GLuint textureID);
+    void unbindAndRestore();
 };
