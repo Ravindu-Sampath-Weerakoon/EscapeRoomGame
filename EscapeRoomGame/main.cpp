@@ -33,6 +33,11 @@ Camera* g_camera = nullptr;
 // Global Labels Pointer
 Labels* g_labels = nullptr;
 
+
+// Start with axes visible
+bool g_showAxes = true;
+
+
 // --- Function Declarations ---
 void display();
 void reshape(int w, int h);
@@ -121,7 +126,12 @@ void display() {
 	g_camera->applyView();
 
 	// --- Draw 3D Scene ---
-	drawAxes(40.0f);
+
+	//  drawAxes IN AN IF STATEMENT
+	if (g_showAxes) {
+		drawAxes(40.0f);
+	}
+
 	drawGrid(40.0f, 40);
 	// drawRoom(); // Add later
 
@@ -197,6 +207,18 @@ void keyboard(unsigned char key, int x, int y) {
 		g_labels->toggleHelp();
 		return; // Consume the Tab key, don't pass to camera
 	}
+
+	// --- MODIFY THIS BLOCK ---
+	if (key == 't' || key == 'T') {
+		// 👇 ADD THIS CHECK: Only toggle if in developer mode
+		if (g_camera->isDeveloperMode()) {
+			g_showAxes = !g_showAxes; // Toggle the boolean
+			printf("DEBUG: Axes %s\n", g_showAxes ? "ON" : "OFF");
+			glutPostRedisplay(); // Request redraw
+		}
+		return; // Consume 't' key press regardless of mode
+	}
+	// --- END OF MODIFICATION ---
 
 	// Pass other keys to the camera
 	g_camera->onKeyDown(key);
