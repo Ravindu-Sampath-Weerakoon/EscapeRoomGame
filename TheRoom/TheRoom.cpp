@@ -77,7 +77,7 @@ void TheRoom::drawFloor() {
 
     // --- OPTIMIZATION: Small Number of Repeats (2.0 times total) ---
     // Since m_width=40, this simplifies to 2.0. Best performance/quality trade-off.
-    float floorRepeat = m_width / (m_width / 2.0f);
+    float floorRepeat = m_width / (m_width / 4.0f);
     // -----------------------------------------------------------------
 
     bindAndCheckTexture(m_texFloor);
@@ -105,8 +105,8 @@ void TheRoom::drawWalls() {
 
     // --- WALLS: Using large divisor for performance (minimal repeats) ---
     // If m_width=40, U repeats 40/32=1.25 times. If m_height=5, V repeats 5/12=0.41 times.
-    float wallRepeatU = m_width / 32.0f;
-    float wallRepeatV = m_height / 24.0f;
+    float wallRepeatU = m_width / 24.0f;
+    float wallRepeatV = m_height /24.0f;
     // -------------------------------------------------------------------
 
     bindAndCheckTexture(m_texWall);
@@ -154,7 +154,7 @@ void TheRoom::drawCeiling() {
     float halfD = m_depth / 2.0f;
 
     // --- OPTIMIZATION: Small Number of Repeats (2.0 times total) ---
-    float ceilRepeat = m_width / (m_width / 2.0f);
+    float ceilRepeat = m_width / (m_width / 1.0f);
 
     bindAndCheckTexture(m_texCeiling);
 

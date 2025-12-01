@@ -10,17 +10,23 @@
 
 // --- Standard libraries ---
 #include <iostream>
-#include <stdio.h> 
+#include <stdio.h> // For printf
 
 // --- Your Custom Game Modules ---
-#include "GraphicsUtils.h"
+#include "GraphicsUtils.h" // Includes grid constants and collision functions
 #include "Cameras.h"
 #include "Labels.h"
-#include "TheRoom.h"
+#include "TheRoom.h"       // <-- Include TheRoom header
 
 //--- OpenGL Libraries ---
 #include <glut.h>
 #include <SOIL2.h> 
+
+// --- FIX: Define LOD Bias Constant for Compatibility ---
+// This is required if your standard headers don't define it (0x8501 is the raw value)
+#ifndef GL_TEXTURE_LOD_BIAS_EXT
+#define GL_TEXTURE_LOD_BIAS_EXT 0x8501 
+#endif
 
 // --- Global Variables ---
 int win_width = 1024;
@@ -35,8 +41,8 @@ Labels* g_labels = nullptr;
 TheRoom* g_room = nullptr;
 
 // Debug toggle flags
-bool g_showAxes = true;
-bool g_showCoordinates = false;
+bool g_showAxes = false;        // Start with axes hidden
+bool g_showCoordinates = false; // Start with coordinates hidden
 
 // --- Function Declarations ---
 void display();
@@ -64,8 +70,7 @@ int main(int argc, char** argv) {
 
 	// 1. Initialize GLUT
 	glutInit(&argc, argv);
-	// Request multisampling (keep this request unless you know the hardware hates it)
-	glutInitDisplayMode(GLUT_DOUBLE | GLUT_DEPTH | GLUT_RGBA | GLUT_MULTISAMPLE);
+	glutInitDisplayMode(GLUT_DOUBLE | GLUT_DEPTH | GLUT_RGBA | GLUT_MULTISAMPLE); // Request multisampling
 
 	// Create Module objects *after* glutInit
 	g_camera = new Camera(win_width, win_height);
@@ -132,9 +137,7 @@ void setupCollisionGrid() {
 	}
 	printf("Boundary walls marked as blocked.\n");
 
-	// Block specific internal cells
-	addBlockGridBox(4, 11);
-	printf("Internal cell (4, 11) marked as blocked.\n");
+	
 }
 
 
@@ -145,16 +148,14 @@ void init() {
 	glClearColor(0.1f, 0.1f, 0.1f, 1.0f); // Dark grey background
 	glEnable(GL_DEPTH_TEST);
 
-	// --- OPTIMIZATION: Use GL_MULTISAMPLE if available ---
+	// OPTIMIZATION: Use GL_MULTISAMPLE if available 
 	glEnable(GLUT_MULTISAMPLE);
-	// Fallback: If this line causes lag, comment it out. Do not use older GL_LINE_SMOOTH/GL_POLYGON_SMOOTH.
-
 	glShadeModel(GL_SMOOTH);
 	glEnable(GL_NORMALIZE);
 
 	// --- Lighting Setup (Ambient Only) ---
 	glEnable(GL_LIGHTING);
-	glDisable(GL_LIGHT0); // Turn off direct light
+	glDisable(GL_LIGHT0);
 
 	// 1. GLOBAL AMBIENT: HIGH AMBIENT FOR VISIBILITY (The only light source)
 	GLfloat global_ambient[] = { 0.5f, 0.5f, 0.5f, 1.0f };
@@ -169,10 +170,14 @@ void init() {
 	glMaterialfv(GL_FRONT, GL_SPECULAR, mat_specular);
 	glMaterialf(GL_FRONT, GL_SHININESS, mat_shininess);
 
+	// --- OPTIMIZATION: Mipmap Level of Detail (LOD) Bias ---
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_LOD_BIAS_EXT, 10.0f); // <-- Aggressive bias for performance
+
 	glColor3f(1.0f, 1.0f, 1.0f); // Set default draw color to white
 
 	// --- Load Room Textures ---
 	if (g_room) {
+		// Loading using optimized DDS filenames
 		g_room->loadTextures(
 			"textures/floor.dds",
 			"textures/wall.dds",
@@ -196,21 +201,18 @@ void display() {
 	g_camera->applyView();
 
 	// --- Draw 3D Scene ---
-	// The Light Position setup is removed as GL_LIGHT0 is disabled.
-
 	if (g_showAxes) {
 		drawAxes(GRID_HALF_SIZE);
 	}
-	// --- OPTIMIZATION: drawGrid is intentionally excluded here ---
-	// If g_showCoordinates is on, we draw the coordinates AND the grid lines
+	// drawGrid is omitted for optimization unless coordinates are on
 	if (g_showCoordinates) {
-		drawGrid(GRID_SIZE, GRID_SEGMENTS); // Only draw grid if coordinates are toggled
+		drawGrid(GRID_SIZE, GRID_SEGMENTS);
 		drawGridCoordinates(GRID_SIZE, GRID_SEGMENTS);
 	}
 
 	// Draw TheRoom
 	if (g_room) {
-		g_room->draw(); // This is the main geometry, now optimized with low texture repeat.
+		g_room->draw(); // This draws the room geometry
 	}
 
 	// --- Draw 2D UI (Labels) ---
