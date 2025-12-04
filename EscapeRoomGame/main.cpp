@@ -146,6 +146,8 @@ void init() {
 	glClearColor(0.1f, 0.1f, 0.1f, 1.0f); // Dark grey background
 	glEnable(GL_DEPTH_TEST);
 
+
+
 	// OPTIMIZATION: Use GL_MULTISAMPLE if available 
 	glEnable(GLUT_MULTISAMPLE);
 	glShadeModel(GL_SMOOTH);
@@ -247,20 +249,33 @@ void reshape(int w, int h) {
 // Idle Callback Function
 // ================================================================
 void idle() {
-	// Calculate Delta-Time (dt)
+	// 1. Get current time in milliseconds
 	int currentTime = glutGet(GLUT_ELAPSED_TIME);
+
+	// 2. Calculate time passed since last frame (in seconds)
 	float dt = (currentTime - g_lastTime) / 1000.0f;
 
-	// OPTIONAL OPTIMIZATION: Frame Rate Limiter (e.g., Cap at ~60 FPS)
-	// if (dt < 0.016f) return; 
+	// --- OPTIMIZATION: Frame Rate Limiter (CPU Saver) ---
+	// Target: 60 Frames Per Second.
+	// Math: 1.0 second / 60 frames = 0.0166 seconds per frame.
+	// If less than 0.016s (16ms) has passed, we wait.
+	if (dt < 0.016f) {
+		return;
+	}
+	// ----------------------------------------------------
 
+	// 3. Cap delta-time to prevent physics glitches if lag occurs
 	if (dt > 0.1f) dt = 0.1f;
+
+	// 4. Update the time tracker
 	g_lastTime = currentTime;
 
-	// Update Camera (handles movement, physics, smoothing, collision)
-	g_camera->update(dt);
+	// 5. Update Game Logic (Physics, Movement, Collision)
+	if (g_camera) {
+		g_camera->update(dt);
+	}
 
-	// Request a redraw for the next frame
+	// 6. Request a redraw for the next frame
 	glutPostRedisplay();
 }
 
