@@ -30,12 +30,18 @@ TheRoom::~TheRoom() {
 GLuint TheRoom::loadSingleTexture(const char* path) {
     if (!path) return 0;
 
+    // Load texture with mipmaps and flipping Y for OpenGL
     GLuint textureID = SOIL_load_OGL_texture(
         path, SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID,
         SOIL_FLAG_MIPMAPS | SOIL_FLAG_INVERT_Y | SOIL_FLAG_TEXTURE_REPEATS
     );
-    if (!textureID) { printf("SOIL2 loading error for '%s': %s\n", path, SOIL_last_result()); return 0; }
 
+    if (!textureID) {
+        printf("SOIL2 loading error for '%s': %s\n", path, SOIL_last_result());
+        return 0;
+    }
+
+    // Set Texture Parameters
     glBindTexture(GL_TEXTURE_2D, textureID);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);

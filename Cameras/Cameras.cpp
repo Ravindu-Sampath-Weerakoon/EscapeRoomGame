@@ -5,6 +5,7 @@
 // --- ADDED FOR INSTANT SPRINT (WINDOWS ONLY) ---
 #ifdef _WIN32
 #include <windows.h> // For GetAsyncKeyState
+#pragma comment(lib, "user32.lib") 
 #endif
 // ---------------------------------------------
 

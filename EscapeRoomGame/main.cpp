@@ -13,17 +13,18 @@
 #include <stdio.h> // For printf
 
 // --- Your Custom Game Modules ---
+#include "InsideWall.h"    // <-- NEW: Include the InsideWall header
 #include "GraphicsUtils.h" // Includes grid constants and collision functions
 #include "Cameras.h"
 #include "Labels.h"
-#include "TheRoom.h"       // <-- Include TheRoom header
+#include "TheRoom.h"
+
 
 //--- OpenGL Libraries ---
 #include <glut.h>
 #include <SOIL2.h> 
 
 // --- FIX: Define LOD Bias Constant for Compatibility ---
-// This is required if your standard headers don't define it (0x8501 is the raw value)
 #ifndef GL_TEXTURE_LOD_BIAS_EXT
 #define GL_TEXTURE_LOD_BIAS_EXT 0x8501 
 #endif
@@ -39,6 +40,7 @@ int g_lastTime = 0;
 Camera* g_camera = nullptr;
 Labels* g_labels = nullptr;
 TheRoom* g_room = nullptr;
+InsideWall* g_insideWalls = nullptr; // <-- NEW: Global pointer for internal walls
 
 // Debug toggle flags
 bool g_showAxes = false;        // Start with axes hidden
@@ -76,6 +78,7 @@ int main(int argc, char** argv) {
 	g_camera = new Camera(win_width, win_height);
 	g_labels = new Labels(win_width, win_height);
 	g_room = new TheRoom(GRID_SIZE, 5.0f, GRID_SIZE);
+	g_insideWalls = new InsideWall(5.0f); // <-- NEW: Initialize InsideWall (Height 5.0)
 
 	// Center the window
 	int screen_width = glutGet(GLUT_SCREEN_WIDTH);
@@ -113,9 +116,11 @@ int main(int argc, char** argv) {
 	delete g_camera;
 	delete g_labels;
 	delete g_room;
+	delete g_insideWalls; // <-- NEW: Clean up
 	g_camera = nullptr;
 	g_labels = nullptr;
 	g_room = nullptr;
+	g_insideWalls = nullptr;
 
 	return 0;
 }
@@ -140,13 +145,11 @@ void setupCollisionGrid() {
 
 
 // ================================================================
-// Initialize OpenGL Function (Updated with Optimization)
+// Initialize OpenGL Function
 // =================================================================
 void init() {
 	glClearColor(0.1f, 0.1f, 0.1f, 1.0f); // Dark grey background
 	glEnable(GL_DEPTH_TEST);
-
-
 
 	// OPTIMIZATION: Use GL_MULTISAMPLE if available 
 	glEnable(GLUT_MULTISAMPLE);
@@ -157,7 +160,7 @@ void init() {
 	glEnable(GL_LIGHTING);
 	glDisable(GL_LIGHT0);
 
-	// 1. GLOBAL AMBIENT: HIGH AMBIENT FOR VISIBILITY (The only light source)
+	// 1. GLOBAL AMBIENT: HIGH AMBIENT FOR VISIBILITY
 	GLfloat global_ambient[] = { 0.5f, 0.5f, 0.5f, 1.0f };
 	glLightModelfv(GL_LIGHT_MODEL_AMBIENT, global_ambient);
 
@@ -171,26 +174,38 @@ void init() {
 	glMaterialf(GL_FRONT, GL_SHININESS, mat_shininess);
 
 	// --- OPTIMIZATION: Mipmap Level of Detail (LOD) Bias ---
-	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_LOD_BIAS_EXT, 10.0f); // <-- Aggressive bias for performance
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_LOD_BIAS_EXT, 10.0f);
 
-	glColor3f(1.0f, 1.0f, 1.0f); // Set default draw color to white
+	glColor3f(1.0f, 1.0f, 1.0f);
 
 	// --- Load Room Textures ---
 	if (g_room) {
-		// Loading using optimized DDS filenames
 		g_room->loadTextures(
 			"textures/floor.dds",
 			"textures/wall.dds",
 			"textures/ceiling.dds"
 		);
 
-		// =========================================================
-		// [IMPORTANT] BUILD THE OPTIMIZED DISPLAY LIST HERE
-		// =========================================================
+		// BUILD THE OPTIMIZED DISPLAY LIST FOR THE ROOM
 		g_room->build();
 	}
 
-	// --- Collision Grid Setup ---
+	// --- Setup Inside Walls (Based on your sketch) ---
+	if (g_insideWalls && g_room) {
+		// 1. Vertical Wall (Left side)
+		// Goes from X=-5, Z=-15 down to X=-5, Z=5
+		g_insideWalls->addWall(-5.0f, -15.0f, -5.0f, 5.0f, 1.0f);
+
+		// 2. Horizontal Wall (Extending from the vertical one)
+		// Goes from X=-5, Z=0 to X=10, Z=0
+		g_insideWalls->addWall(-5.0f, 0.0f, 10.0f, 0.0f, 1.0f);
+
+		// Build the walls (This also updates the Collision Grid!)
+		// Note: We reuse the wall texture from TheRoom
+		g_insideWalls->build(g_room->getWallTextureID());
+	}
+
+	// --- Collision Grid Setup (Boundaries) ---
 	setupCollisionGrid();
 }
 
@@ -209,7 +224,7 @@ void display() {
 	if (g_showAxes) {
 		drawAxes(GRID_HALF_SIZE);
 	}
-	// drawGrid is omitted for optimization unless coordinates are on
+
 	if (g_showCoordinates) {
 		drawGrid(GRID_SIZE, GRID_SEGMENTS);
 		drawGridCoordinates(GRID_SIZE, GRID_SEGMENTS);
@@ -217,7 +232,12 @@ void display() {
 
 	// Draw TheRoom
 	if (g_room) {
-		g_room->draw(); // This draws the room geometry (using the Display List if available)
+		g_room->draw();
+	}
+
+	// Draw Internal Walls
+	if (g_insideWalls) {
+		g_insideWalls->draw();
 	}
 
 	// --- Draw 2D UI (Labels) ---
@@ -240,13 +260,12 @@ void reshape(int w, int h) {
 	glLoadIdentity();
 	gluPerspective(60.0, (float)w / h, 0.1, 100.0);
 
-	// Notify modules of resize
 	g_camera->onWindowResize(w, h);
 	g_labels->onWindowResize(w, h);
 }
 
 // ================================================================
-// Idle Callback Function
+// Idle Callback Function (Optimized)
 // ================================================================
 void idle() {
 	// 1. Get current time in milliseconds
@@ -256,9 +275,6 @@ void idle() {
 	float dt = (currentTime - g_lastTime) / 1000.0f;
 
 	// --- OPTIMIZATION: Frame Rate Limiter (CPU Saver) ---
-	// Target: 60 Frames Per Second.
-	// Math: 1.0 second / 60 frames = 0.0166 seconds per frame.
-	// If less than 0.016s (16ms) has passed, we wait.
 	if (dt < 0.016f) {
 		return;
 	}
@@ -285,7 +301,6 @@ void idle() {
 // ================================================================
 
 void keyboard(unsigned char key, int x, int y) {
-	// IMPORTANT: Update modifiers FIRST in key/special callbacks
 	g_camera->updateModifiers(glutGetModifiers());
 
 	if (key == 27) { // ESC Key
@@ -293,6 +308,7 @@ void keyboard(unsigned char key, int x, int y) {
 		delete g_camera;
 		delete g_labels;
 		delete g_room;
+		delete g_insideWalls;
 		exit(0);
 	}
 	if (key == '\t') { // Tab Key
@@ -318,7 +334,6 @@ void keyboard(unsigned char key, int x, int y) {
 		return;
 	}
 
-	// Pass other keys to the camera
 	g_camera->onKeyDown(key);
 }
 
@@ -338,6 +353,5 @@ void specialKeysUp(int key, int x, int y) {
 }
 
 void mouseMotion(int x, int y) {
-	// DO NOT call updateModifiers here to avoid GLUT warnings
 	g_camera->onMouseMovement(x, y);
 }

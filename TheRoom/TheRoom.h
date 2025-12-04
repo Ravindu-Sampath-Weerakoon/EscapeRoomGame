@@ -12,6 +12,10 @@ public:
     // Loads the textures from files
     bool loadTextures(const char* floorTexPath, const char* wallTexPath, const char* ceilingTexPath);
 
+    // --- NEW: Getter for the Wall Texture ID ---
+    // This allows other modules (like InsideWall) to reuse the existing texture.
+    GLuint getWallTextureID() const { return m_texWall; }
+
     // --- NEW: Compiles the drawing commands into a Display List ---
     // Call this AFTER loadTextures()
     void build();
