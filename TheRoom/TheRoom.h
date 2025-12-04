@@ -1,13 +1,23 @@
 #pragma once
-#include "pch.h" // Includes <glut.h>
+#include "pch.h" // Includes <glut.h> and other standards
 
 class TheRoom {
 public:
     // Constructor: Define room dimensions
     TheRoom(float width, float height, float depth);
 
+    // Destructor: Cleans up the Display List
+    ~TheRoom();
+
+    // Loads the textures from files
     bool loadTextures(const char* floorTexPath, const char* wallTexPath, const char* ceilingTexPath);
-    void draw(); // Master draw function
+
+    // --- NEW: Compiles the drawing commands into a Display List ---
+    // Call this AFTER loadTextures()
+    void build();
+
+    // Master draw function (Optimized to use the Display List)
+    void draw();
 
 private:
     float m_width;
@@ -18,6 +28,9 @@ private:
     GLuint m_texWall;
     GLuint m_texCeiling;
 
+    // --- NEW: Variable to store the Display List ID ---
+    GLuint m_displayListID;
+
     // Internal Drawing Functions
     void drawFloor();
     void drawWalls();
@@ -25,9 +38,8 @@ private:
 
     // Internal Texture Management
     GLuint loadSingleTexture(const char* path);
-    // GLuint createCheckerboardTexture(int width, int height, int checkSize); // (Optional, depending on implementation)
 
-    // ADD THESE NEW HELPER DECLARATIONS
+    // Helper functions for texture binding
     void bindAndCheckTexture(GLuint textureID);
     void unbindAndRestore();
 };

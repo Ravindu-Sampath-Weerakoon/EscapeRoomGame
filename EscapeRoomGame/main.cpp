@@ -136,13 +136,11 @@ void setupCollisionGrid() {
 		}
 	}
 	printf("Boundary walls marked as blocked.\n");
-
-	
 }
 
 
 // ================================================================
-// Initialize OpenGL Function (Optimized & Ambient Lighting)
+// Initialize OpenGL Function (Updated with Optimization)
 // =================================================================
 void init() {
 	glClearColor(0.1f, 0.1f, 0.1f, 1.0f); // Dark grey background
@@ -183,6 +181,11 @@ void init() {
 			"textures/wall.dds",
 			"textures/ceiling.dds"
 		);
+
+		// =========================================================
+		// [IMPORTANT] BUILD THE OPTIMIZED DISPLAY LIST HERE
+		// =========================================================
+		g_room->build();
 	}
 
 	// --- Collision Grid Setup ---
@@ -212,7 +215,7 @@ void display() {
 
 	// Draw TheRoom
 	if (g_room) {
-		g_room->draw(); // This draws the room geometry
+		g_room->draw(); // This draws the room geometry (using the Display List if available)
 	}
 
 	// --- Draw 2D UI (Labels) ---
@@ -247,6 +250,10 @@ void idle() {
 	// Calculate Delta-Time (dt)
 	int currentTime = glutGet(GLUT_ELAPSED_TIME);
 	float dt = (currentTime - g_lastTime) / 1000.0f;
+
+	// OPTIONAL OPTIMIZATION: Frame Rate Limiter (e.g., Cap at ~60 FPS)
+	// if (dt < 0.016f) return; 
+
 	if (dt > 0.1f) dt = 0.1f;
 	g_lastTime = currentTime;
 
