@@ -37,6 +37,12 @@ private:
      */
     void renderText(float x, float y, const char* text);
 
+    /**
+     * @brief Internal helper to calculate width of text in pixels.
+     * Required for auto-sizing the black background boxes.
+     */
+    int getTextWidth(const char* text);
+
     // --- State ---
     bool m_showHelp; // Tracks if the Tab menu is open
 
