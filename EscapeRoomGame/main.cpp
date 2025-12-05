@@ -12,9 +12,9 @@
 #include <iostream>
 #include <stdio.h> // For printf
 
-// --- My Custom Game Modules ---
+// --- Your Custom Game Modules ---
 #include "InsideWall.h"    // Internal Walls
-#include "CornerTower.h"   // <-- NEW: Include the Corner Tower header
+#include "CornerTower.h"   // Corner Towers
 #include "GraphicsUtils.h" // Includes grid constants and collision functions
 #include "Cameras.h"
 #include "Labels.h"
@@ -42,9 +42,10 @@ Camera* g_camera = nullptr;
 Labels* g_labels = nullptr;
 TheRoom* g_room = nullptr;
 InsideWall* g_insideWalls = nullptr;
-CornerTower* g_tower = nullptr; // <-- NEW: Global pointer for corner towers
+CornerTower* g_tower = nullptr;
 
-// Debug toggle flags
+// Game State
+bool g_flashlightOn = true;     // Starts with flashlight ON
 bool g_showAxes = false;        // Start with axes hidden
 bool g_showCoordinates = false; // Start with coordinates hidden
 
@@ -81,9 +82,7 @@ int main(int argc, char** argv) {
 	g_labels = new Labels(win_width, win_height);
 	g_room = new TheRoom(GRID_SIZE, 5.0f, GRID_SIZE);
 	g_insideWalls = new InsideWall(5.0f);
-
-	// --- NEW: Initialize CornerTower (Room Height = 5.0, Tower Width = 1.5) ---
-	g_tower = new CornerTower(5.0f, 1.5f);
+	g_tower = new CornerTower(5.0f, 1.5f); // Height 5.0, Width 1.5
 
 	// Center the window
 	int screen_width = glutGet(GLUT_SCREEN_WIDTH);
@@ -122,7 +121,7 @@ int main(int argc, char** argv) {
 	delete g_labels;
 	delete g_room;
 	delete g_insideWalls;
-	delete g_tower; // <-- NEW: Clean up
+	delete g_tower;
 	g_camera = nullptr;
 	g_labels = nullptr;
 	g_room = nullptr;
@@ -163,26 +162,40 @@ void init() {
 	glShadeModel(GL_SMOOTH);
 	glEnable(GL_NORMALIZE);
 
-	// --- Lighting Setup (Ambient Only) ---
+	// --- LIGHTING SETUP ---
 	glEnable(GL_LIGHTING);
-	glDisable(GL_LIGHT0);
 
-	// 1. GLOBAL AMBIENT: HIGH AMBIENT FOR VISIBILITY
-	GLfloat global_ambient[] = { 0.5f, 0.5f, 0.5f, 1.0f };
+	// 1. Initial Global Ambient (Will be updated in display loop)
+	GLfloat global_ambient[] = { 0.2f, 0.2f, 0.2f, 1.0f };
 	glLightModelfv(GL_LIGHT_MODEL_AMBIENT, global_ambient);
 
-	// --- Material Properties Setup ---
+	// 2. Material Properties (High Shininess for Towers)
 	glEnable(GL_COLOR_MATERIAL);
 	glColorMaterial(GL_FRONT, GL_AMBIENT_AND_DIFFUSE);
 
-	GLfloat mat_specular[] = { 0.0f, 0.0f, 0.0f, 1.0f };
-	GLfloat mat_shininess = 0.0f;
+	GLfloat mat_specular[] = { 1.0f, 1.0f, 1.0f, 1.0f };
+	GLfloat mat_shininess = 50.0f; // Shiny metal look
 	glMaterialfv(GL_FRONT, GL_SPECULAR, mat_specular);
 	glMaterialf(GL_FRONT, GL_SHININESS, mat_shininess);
 
-	// --- OPTIMIZATION: Mipmap Level of Detail (LOD) Bias ---
-	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_LOD_BIAS_EXT, 10.0f);
+	// 3. FLASHLIGHT SETUP (GL_LIGHT1)
+	GLfloat light_diffuse[] = { 1.0f, 1.0f, 0.9f, 1.0f };
+	GLfloat light_specular[] = { 1.0f, 1.0f, 1.0f, 1.0f };
 
+	glLightfv(GL_LIGHT1, GL_DIFFUSE, light_diffuse);
+	glLightfv(GL_LIGHT1, GL_SPECULAR, light_specular);
+
+	glLightf(GL_LIGHT1, GL_SPOT_CUTOFF, 25.0f);   // 25 degree beam
+	glLightf(GL_LIGHT1, GL_SPOT_EXPONENT, 10.0f); // Focused center
+
+	glLightf(GL_LIGHT1, GL_CONSTANT_ATTENUATION, 1.0f);
+	glLightf(GL_LIGHT1, GL_LINEAR_ATTENUATION, 0.05f);
+	glLightf(GL_LIGHT1, GL_QUADRATIC_ATTENUATION, 0.005f);
+
+	glEnable(GL_LIGHT1);
+
+	// --- OPTIMIZATION: Mipmap Level of Detail (LOD) Bias ---
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_LOD_BIAS_EXT, -0.5f);
 	glColor3f(1.0f, 1.0f, 1.0f);
 
 	// --- Load Room Textures ---
@@ -192,55 +205,34 @@ void init() {
 			"textures/wall.dds",
 			"textures/ceiling.dds"
 		);
-
-		// BUILD THE OPTIMIZED DISPLAY LIST FOR THE ROOM
 		g_room->build();
 	}
 
-	// --- Setup Inside Walls (Based on your sketch) ---
+	// --- Setup Inside Walls (Your Layout) ---
 	if (g_insideWalls && g_room) {
 		// 1. Vertical Wall (Left side)
-		// Goes from X=-5, Z=-15 down to X=-5, Z=5
 		g_insideWalls->addWall(-20.0f, -16.0f, 16.0f, -16.0f, 0.5f);
 
-		// 2. Horizontal Wall (Extending from the vertical one)
-		// Goes from X=-5, Z=0 to X=10, Z=0
+		// 2. Horizontal Wall 
 		g_insideWalls->addWall(-16.0f, 0.0f, 16.0f, 0.0f, 0.5f);
 
-		//3
+		// 3. Other segments
 		g_insideWalls->addWall(-16.0f, 16.0f, 20.0f, 16.0f, 0.5f);
-
-		//4
 		g_insideWalls->addWall(-16.0f, 0.0f, -16.0f, 16.0f, 0.5f);
-
-		//5
 		g_insideWalls->addWall(0.0f, 0.0f, 0.0f, -12.0f, 0.5f);
 
-		// Build the walls (This also updates the Collision Grid!)
-		// Note: We reuse the wall texture from TheRoom
 		g_insideWalls->build(g_room->getWallTextureID());
 	}
 
-	// ====================================================================
-	// NEW: Setup Corner Towers (Adding one to each of the 4 corners)
-	// ====================================================================
+	// --- Setup Corner Towers (Your Layout) ---
 	if (g_tower && g_room) {
-		// Room size is 40x40, so corners are at +/- 20.0f
-
-		//currently not need add corner towers to outside walls
-		//g_tower->addTower(-20.0f, -20.0f); // Back-Left Corner
-		//g_tower->addTower(20.0f, -20.0f); // Back-Right Corner
-		//g_tower->addTower(20.0f, 20.0f); // Front-Right Corner
-		//g_tower->addTower(-20.0f, 20.0f); // Front-Left Corner
-
-		//add coner tower to inside walls
+		// Adding towers to specific locations inside the maze
 		g_tower->addTower(16.0f, -16.0f);
 		g_tower->addTower(16.0f, 0.0f);
 		g_tower->addTower(0.0f, -12.0f);
 		g_tower->addTower(-16.0f, 16.0f);
 		g_tower->addTower(-16.0f, 0.0f);
 
-		// Build towers (reuses wall texture for metallic look, or load a new one)
 		g_tower->build(g_room->getWallTextureID());
 	}
 
@@ -249,7 +241,10 @@ void init() {
 }
 
 // ================================================================
-// Display Callback Function
+// Display Callback Function (Dynamic Lighting)
+// ================================================================
+// ================================================================
+// Display Callback Function (Dynamic Lighting)
 // ================================================================
 void display() {
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -257,9 +252,82 @@ void display() {
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
 
+	// --- DYNAMIC LIGHTING LOGIC ---
+	// Default: Dark, scary atmosphere
+	GLfloat currentAmbient[] = { 0.3f, 0.3f, 0.3f, 1.0f };
+
+	if (g_camera->isDeveloperMode()) {
+		// Developer Mode: Full Brightness
+		currentAmbient[0] = 0.6f; currentAmbient[1] = 0.6f; currentAmbient[2] = 0.6f;
+		glEnable(GL_LIGHT1); // Enable Spot
+		glDisable(GL_LIGHT2); // Disable Aura (not needed)
+	}
+	else {
+		// Game Mode: Depends on Flashlight
+		if (g_flashlightOn) {
+			glEnable(GL_LIGHT1); // Enable Spot (Distance)
+			glEnable(GL_LIGHT2); // Enable Aura (Nearby)
+			// Ambient stays at 0.3
+		}
+		else {
+			glDisable(GL_LIGHT1);
+			glDisable(GL_LIGHT2);
+			// Extremely dark when flashlight is off
+			currentAmbient[0] = 0.05f; currentAmbient[1] = 0.05f; currentAmbient[2] = 0.05f;
+		}
+	}
+	glLightModelfv(GL_LIGHT_MODEL_AMBIENT, currentAmbient);
+
+	if (g_flashlightOn || g_camera->isDeveloperMode()) {
+		// --- LIGHT 1: THE SPOTLIGHT (Torch) ---
+		// Projects light forward to see in the distance
+		if (glIsEnabled(GL_LIGHT1)) {
+			GLfloat spot_pos[] = { 0.0f, 0.0f, 0.0f, 1.0f };
+			GLfloat spot_dir[] = { 0.0f, 0.0f, -1.0f };
+
+			glLightfv(GL_LIGHT1, GL_POSITION, spot_pos);
+			glLightfv(GL_LIGHT1, GL_SPOT_DIRECTION, spot_dir);
+			glLightf(GL_LIGHT1, GL_SPOT_CUTOFF, 50.0f);   // Focused beam
+			glLightf(GL_LIGHT1, GL_SPOT_EXPONENT, 15.0f);
+
+			// Fades over distance
+			glLightf(GL_LIGHT1, GL_CONSTANT_ATTENUATION, 1.0f);
+			glLightf(GL_LIGHT1, GL_LINEAR_ATTENUATION, 0.02f);
+			glLightf(GL_LIGHT1, GL_QUADRATIC_ATTENUATION, 0.0f);
+		}
+
+		// --- LIGHT 2: THE PLAYER AURA (Lantern) ---
+		// Omnidirectional light that illuminates everything CLOSE to the player.
+		// This fixes the "dark wall" issue because it shines in all directions.
+		if (glIsEnabled(GL_LIGHT2)) {
+			// Position: Slightly above head (like a ceiling light following you)
+			GLfloat aura_pos[] = { 0.0f, 0.5f, 0.0f, 1.0f };
+
+			// Color: Warm/Yellowish (Candle-like)
+			// UPDATED: Even Brighter (1.0, 0.95, 0.8)
+			GLfloat aura_color[] = { 1.0f, 0.95f, 0.8f, 1.0f };
+			glLightfv(GL_LIGHT2, GL_DIFFUSE, aura_color);
+			glLightfv(GL_LIGHT2, GL_SPECULAR, aura_color);
+
+			glLightfv(GL_LIGHT2, GL_POSITION, aura_pos);
+
+			// IMPORTANT: Point Light has 180 cutoff (omnidirectional)
+			glLightf(GL_LIGHT2, GL_SPOT_CUTOFF, 180.0f);
+
+			// UPDATED ATTENUATION: Very realistic falloff
+			// Constant=1.0 (Full brightness at source)
+			// Linear=0.02 (Was 0.05) -> Extremely slow fade, reaches far
+			// Quadratic=0.002 (Was 0.005) -> Gentle curve at distance
+			glLightf(GL_LIGHT2, GL_CONSTANT_ATTENUATION, 1.0f);
+			glLightf(GL_LIGHT2, GL_LINEAR_ATTENUATION, 0.02f);
+			glLightf(GL_LIGHT2, GL_QUADRATIC_ATTENUATION, 0.002f);
+		}
+	}
+	// ------------------------------
+
 	g_camera->applyView();
 
-	// --- Draw 3D Scene ---
+	// --- Draw Scene ---
 	if (g_showAxes) {
 		drawAxes(GRID_HALF_SIZE);
 	}
@@ -269,23 +337,11 @@ void display() {
 		drawGridCoordinates(GRID_SIZE, GRID_SEGMENTS);
 	}
 
-	// Draw TheRoom
-	if (g_room) {
-		g_room->draw();
-	}
-
-	// Draw Internal Walls
-	if (g_insideWalls) {
-		g_insideWalls->draw();
-	}
-
-	// --- NEW: Draw Corner Towers ---
-	if (g_tower) {
-		g_tower->draw();
-	}
+	if (g_room) g_room->draw();
+	if (g_insideWalls) g_insideWalls->draw();
+	if (g_tower) g_tower->draw();
 
 	// --- Draw 2D UI (Labels) ---
-	// UPDATED: Now passing 4 arguments: Developer Mode, X, Y, Z
 	if (g_labels && g_camera) {
 		g_labels->draw(
 			g_camera->isDeveloperMode(),
@@ -297,7 +353,6 @@ void display() {
 
 	glutSwapBuffers();
 }
-
 // ================================================================
 // Reshape Callback Function
 // ================================================================
@@ -361,13 +416,20 @@ void keyboard(unsigned char key, int x, int y) {
 		delete g_labels;
 		delete g_room;
 		delete g_insideWalls;
-		delete g_tower; // <-- NEW: Clean up
+		delete g_tower;
 		exit(0);
 	}
 	if (key == '\t') { // Tab Key
 		g_labels->toggleHelp();
 		return;
 	}
+
+	// Flashlight Toggle ('F')
+	if (key == 'f' || key == 'F') {
+		g_flashlightOn = !g_flashlightOn;
+		printf("Flashlight: %s\n", g_flashlightOn ? "ON" : "OFF");
+	}
+
 	// Toggle Axes ('T') - Dev Mode Only
 	if (key == 't' || key == 'T') {
 		if (g_camera->isDeveloperMode()) {
