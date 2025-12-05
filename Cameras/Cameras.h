@@ -67,8 +67,12 @@ public:
      */
     bool isDeveloperMode() const { return m_isDeveloperMode; }
 
-    void setPosition(float x, float y, float z);
+    void setPosition(float x, float z);
     void setGroundLevel(float level) { m_groundLevel = level; m_posY = level; }
+
+    float getX() { return m_posX; }
+    float getY() { return m_posY; }
+    float getZ() { return m_posZ; }
 
 private:
     // --- INTERNAL HELPERS ---
@@ -122,6 +126,8 @@ private:
     int  m_windowWidth, m_windowHeight;
     int  m_windowCenterX, m_windowCenterY;
     bool m_firstMouse; // Prevents camera from jumping on first mouse move
+
+
 
 
 };

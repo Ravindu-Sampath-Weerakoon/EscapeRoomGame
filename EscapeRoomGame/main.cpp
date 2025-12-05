@@ -102,7 +102,7 @@ int main(int argc, char** argv) {
 
 	// Configure the Camera's starting state
 	g_camera->setGroundLevel(1.5f);
-	g_camera->setPosition(0.0f, 1.5f, 5.0f);
+	g_camera->setPosition(-18.0f, -18.0f);
 
 	// 3. Call one-time setup functions
 	init();
@@ -241,7 +241,15 @@ void display() {
 	}
 
 	// --- Draw 2D UI (Labels) ---
-	g_labels->draw(g_camera->isDeveloperMode());
+	// UPDATED: Now passing 4 arguments: Developer Mode, X, Y, Z
+	if (g_labels && g_camera) {
+		g_labels->draw(
+			g_camera->isDeveloperMode(),
+			g_camera->getX(),
+			g_camera->getY(),
+			g_camera->getZ()
+		);
+	}
 
 	glutSwapBuffers();
 }

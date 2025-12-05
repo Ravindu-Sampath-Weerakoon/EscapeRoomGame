@@ -15,8 +15,11 @@ public:
     /**
      * @brief Call this from your main display() function to draw all labels.
      * @param isDeveloperMode Pass in the camera's current mode.
+     * @param camX The camera's current X position.
+     * @param camY The camera's current Y position.
+     * @param camZ The camera's current Z position.
      */
-    void draw(bool isDeveloperMode);
+    void draw(bool isDeveloperMode, float camX, float camY, float camZ);
 
     /**
      * @brief Call this from your keyboard() function when Tab is pressed.
