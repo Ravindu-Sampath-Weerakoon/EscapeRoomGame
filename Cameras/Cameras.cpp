@@ -36,7 +36,7 @@ Camera::Camera(int windowWidth, int windowHeight) {
     m_posY = m_groundLevel;
     setPosition(0.0f, 5.0f); // UPDATED: Only X and Z
 
-    m_yaw = -90.0f; // Look forward (along -Z)
+    m_yaw = 90.0f; // Look forward (along -Z)
     m_pitch = 0.0f;
 
     // Clear all input states

@@ -194,11 +194,20 @@ void init() {
 	if (g_insideWalls && g_room) {
 		// 1. Vertical Wall (Left side)
 		// Goes from X=-5, Z=-15 down to X=-5, Z=5
-		g_insideWalls->addWall(-5.0f, -15.0f, -5.0f, 5.0f, 1.0f);
+		g_insideWalls->addWall(-20.0f, -16.0f, 16.0f, -16.0f, 0.5f);
 
 		// 2. Horizontal Wall (Extending from the vertical one)
 		// Goes from X=-5, Z=0 to X=10, Z=0
-		g_insideWalls->addWall(-5.0f, 0.0f, 10.0f, 0.0f, 1.0f);
+		g_insideWalls->addWall(-16.0f, 0.0f, 16.0f, 0.0f, 0.5f);
+
+		//3
+		g_insideWalls->addWall(-16.0f, 16.0f, 20.0f, 16.0f, 0.5f);
+
+		//4
+		g_insideWalls->addWall(-16.0f, 0.0f, -16.0f, 16.0f, 0.5f);
+
+		//5
+		g_insideWalls->addWall(0.0f, 0.0f, 0.0f, -12.0f, 0.5f);
 
 		// Build the walls (This also updates the Collision Grid!)
 		// Note: We reuse the wall texture from TheRoom
