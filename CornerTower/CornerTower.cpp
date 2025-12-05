@@ -1,158 +1,193 @@
 #include "pch.h" // Must be first
-#include <stdio.h>
 #include "CornerTower.h"
-#include "GraphicsUtils.h" // Needed for worldToGrid and addBlockGridBox
+#include "GraphicsUtils.h" // For collision functions
+#include <stdio.h>
+#include <math.h>
 
-#include <math.h> // For fabs()
-
-// Constructor: Sets up the dimensions shared by all towers
+// Constructor sets the shared dimensions
 CornerTower::CornerTower(float roomHeight, float towerWidth)
     : m_height(roomHeight), m_width(towerWidth),
     m_textureID(0), m_displayListID(0)
 {
-    // Design Tweaks: Adjust these to change how the rims look
-    m_rimHeight = 0.2f;    // The base and top are 0.2 units high
-    m_rimOverhang = 0.2f;  // The rims stick out 0.2 units wider than the tower
+    // Design Tweaks: 
+    // We will use these for the cascading effect
+    m_rimHeight = 0.15f;    // Thinner individual layers for cascade
+    m_rimOverhang = 0.15f;  // Each layer steps in by this much
 }
 
-// Destructor: Clean up GPU memory
 CornerTower::~CornerTower() {
-    if (m_displayListID != 0) {
-        glDeleteLists(m_displayListID, 1);
-    }
+    if (m_displayListID != 0) glDeleteLists(m_displayListID, 1);
 }
 
-// Add a new tower at a specific X, Z location
+// Add a tower position to the list
 void CornerTower::addTower(float x, float z) {
-    // 1. Store the position
     TowerPos t;
     t.x = x;
     t.z = z;
     m_towers.push_back(t);
 
-    // 2. IMMEDIATE COLLISION UPDATE
-    // We calculate the footprint of the tower (including the rim)
-    // and block the corresponding squares on the global grid.
+    // --- COLLISION UPDATE ---
+    // Collision covers the WIDEST part (the bottom-most base layer)
+    // 3 layers of overhang means width + (3 * overhang * 2)
+    float maxBaseWidth = m_width + (m_rimOverhang * 3.0f * 2.0f);
+    float halfW = maxBaseWidth / 2.0f;
 
-    float totalWidth = m_width + (m_rimOverhang * 2.0f);
-    float halfW = totalWidth / 2.0f;
-
-    // Loop through the tower's footprint (stepping by 0.5 to catch all grid cells)
     for (float i = x - halfW; i <= x + halfW; i += 0.5f) {
         for (float j = z - halfW; j <= z + halfW; j += 0.5f) {
             int gx, gz;
-            // Convert world coordinate to grid index
             if (worldToGrid(i, j, gx, gz)) {
-                addBlockGridBox(gx, gz); // Block this square!
+                addBlockGridBox(gx, gz);
             }
         }
     }
-    printf("CornerTower added at (%.1f, %.1f) - Collision Updated.\n", x, z);
+    printf("Design Tower added at (%.1f, %.1f)\n", x, z);
 }
 
-// Generate the OpenGL Display List
 void CornerTower::build(GLuint textureID) {
     m_textureID = textureID;
 
-    // Clean up old list if exists
     if (m_displayListID != 0) glDeleteLists(m_displayListID, 1);
-
-    // Generate new list ID
     m_displayListID = glGenLists(1);
 
-    // Start Recording commands
     glNewList(m_displayListID, GL_COMPILE);
 
     glEnable(GL_TEXTURE_2D);
     glBindTexture(GL_TEXTURE_2D, m_textureID);
-    glColor3f(1.0f, 1.0f, 1.0f); // White material to show texture clearly
+    glColor3f(1.0f, 1.0f, 1.0f);
 
-    // LOOP through all added towers and draw them
     for (const auto& tower : m_towers) {
         float x = tower.x;
         float z = tower.z;
 
-        // --- PART 1: BOTTOM RIM (The Base) ---
+        // ======================================================
+        // 1. CASCADING BASE (3 Layers)
+        // ======================================================
+        // Layer 1 (Bottom - Widest)
+        float baseY = m_rimHeight / 2.0f;
+        float layer1W = m_width + (m_rimOverhang * 6.0f); // Widest
         glPushMatrix();
-        // Move to position. Y is half of rim height so it sits exactly on floor.
-        glTranslatef(x, m_rimHeight / 2.0f, z);
-        drawBox(m_width + m_rimOverhang * 2, m_rimHeight, m_width + m_rimOverhang * 2);
+        glTranslatef(x, baseY, z);
+        drawBox(layer1W, m_rimHeight, layer1W);
         glPopMatrix();
 
-        // --- PART 2: MAIN SHAFT (The Middle) ---
-        float shaftHeight = m_height - (m_rimHeight * 2); // Subtract top and bottom rims
+        // Layer 2 (Middle Base)
+        baseY += m_rimHeight;
+        float layer2W = m_width + (m_rimOverhang * 4.0f);
         glPushMatrix();
-        // Move up: Bottom Rim Height + Half Shaft Height
-        glTranslatef(x, m_rimHeight + (shaftHeight / 2.0f), z);
-        drawBox(m_width, shaftHeight, m_width);
+        glTranslatef(x, baseY, z);
+        drawBox(layer2W, m_rimHeight, layer2W);
         glPopMatrix();
 
-        // --- PART 3: TOP RIM (The Cap) ---
+        // Layer 3 (Top Base)
+        baseY += m_rimHeight;
+        float layer3W = m_width + (m_rimOverhang * 2.0f);
         glPushMatrix();
-        // Move to very top: Total Height - Half Rim Height
-        glTranslatef(x, m_height - (m_rimHeight / 2.0f), z);
-        drawBox(m_width + m_rimOverhang * 2, m_rimHeight, m_width + m_rimOverhang * 2);
+        glTranslatef(x, baseY, z);
+        drawBox(layer3W, m_rimHeight, layer3W);
+        glPopMatrix();
+
+        // Total height used by base
+        float totalBaseH = m_rimHeight * 3.0f;
+
+
+        // ======================================================
+        // 2. CASCADING TOP CAP (3 Layers - Reversed)
+        // ======================================================
+        float topY = m_height - (m_rimHeight / 2.0f);
+
+        // Layer 1 (Top-most - Widest)
+        glPushMatrix();
+        glTranslatef(x, topY, z);
+        drawBox(layer1W, m_rimHeight, layer1W);
+        glPopMatrix();
+
+        // Layer 2
+        topY -= m_rimHeight;
+        glPushMatrix();
+        glTranslatef(x, topY, z);
+        drawBox(layer2W, m_rimHeight, layer2W);
+        glPopMatrix();
+
+        // Layer 3
+        topY -= m_rimHeight;
+        glPushMatrix();
+        glTranslatef(x, topY, z);
+        drawBox(layer3W, m_rimHeight, layer3W);
+        glPopMatrix();
+
+        float totalTopH = m_rimHeight * 3.0f;
+
+
+        // ======================================================
+        // 3. DETAILED MAIN SHAFT
+        // ======================================================
+        float shaftH = m_height - totalBaseH - totalTopH;
+        float shaftCenterY = totalBaseH + (shaftH / 2.0f);
+
+        // A. Inner Core (The main block)
+        glPushMatrix();
+        glTranslatef(x, shaftCenterY, z);
+        drawBox(m_width * 0.9f, shaftH, m_width * 0.9f); // Slightly inset
+        glPopMatrix();
+
+        // B. Corner Pillars (Vertical Ridges)
+        // We draw 4 thin posts at the corners of the shaft to give it a "framed" look
+        float postW = m_width * 0.15f; // Thin posts
+        float postOffset = (m_width / 2.0f) - (postW / 2.0f); // Push to corners
+
+        // Front-Left Post
+        glPushMatrix();
+        glTranslatef(x - postOffset, shaftCenterY, z + postOffset);
+        drawBox(postW, shaftH, postW);
+        glPopMatrix();
+
+        // Front-Right Post
+        glPushMatrix();
+        glTranslatef(x + postOffset, shaftCenterY, z + postOffset);
+        drawBox(postW, shaftH, postW);
+        glPopMatrix();
+
+        // Back-Left Post
+        glPushMatrix();
+        glTranslatef(x - postOffset, shaftCenterY, z - postOffset);
+        drawBox(postW, shaftH, postW);
+        glPopMatrix();
+
+        // Back-Right Post
+        glPushMatrix();
+        glTranslatef(x + postOffset, shaftCenterY, z - postOffset);
+        drawBox(postW, shaftH, postW);
         glPopMatrix();
     }
 
     glDisable(GL_TEXTURE_2D);
-    glEndList(); // Stop Recording
+    glEndList();
 }
 
-// Render the towers
 void CornerTower::draw() {
     if (m_displayListID != 0) {
         glCallList(m_displayListID);
     }
 }
 
-// Helper to draw a textured box centered at (0,0,0)
+// Helper to draw a textured cube centered at (0,0,0)
 void CornerTower::drawBox(float w, float h, float d) {
-    float hw = w / 2.0f; // Half Width
-    float hh = h / 2.0f; // Half Height
-    float hd = d / 2.0f; // Half Depth
+    float hw = w / 2.0f;
+    float hh = h / 2.0f;
+    float hd = d / 2.0f;
 
     glBegin(GL_QUADS);
-    // Front Face (+Z)
-    glNormal3f(0, 0, 1);
-    glTexCoord2f(0, 0); glVertex3f(-hw, -hh, hd);
-    glTexCoord2f(1, 0); glVertex3f(hw, -hh, hd);
-    glTexCoord2f(1, 1); glVertex3f(hw, hh, hd);
-    glTexCoord2f(0, 1); glVertex3f(-hw, hh, hd);
-
-    // Back Face (-Z)
-    glNormal3f(0, 0, -1);
-    glTexCoord2f(0, 0); glVertex3f(hw, -hh, -hd);
-    glTexCoord2f(1, 0); glVertex3f(-hw, -hh, -hd);
-    glTexCoord2f(1, 1); glVertex3f(-hw, hh, -hd);
-    glTexCoord2f(0, 1); glVertex3f(hw, hh, -hd);
-
-    // Left Face (-X)
-    glNormal3f(-1, 0, 0);
-    glTexCoord2f(0, 0); glVertex3f(-hw, -hh, -hd);
-    glTexCoord2f(1, 0); glVertex3f(-hw, -hh, hd);
-    glTexCoord2f(1, 1); glVertex3f(-hw, hh, hd);
-    glTexCoord2f(0, 1); glVertex3f(-hw, hh, -hd);
-
-    // Right Face (+X)
-    glNormal3f(1, 0, 0);
-    glTexCoord2f(0, 0); glVertex3f(hw, -hh, hd);
-    glTexCoord2f(1, 0); glVertex3f(hw, -hh, -hd);
-    glTexCoord2f(1, 1); glVertex3f(hw, hh, -hd);
-    glTexCoord2f(0, 1); glVertex3f(hw, hh, hd);
-
-    // Top Face (+Y)
-    glNormal3f(0, 1, 0);
-    glTexCoord2f(0, 0); glVertex3f(-hw, hh, hd);
-    glTexCoord2f(1, 0); glVertex3f(hw, hh, hd);
-    glTexCoord2f(1, 1); glVertex3f(hw, hh, -hd);
-    glTexCoord2f(0, 1); glVertex3f(-hw, hh, -hd);
-
-    // Bottom Face (-Y)
-    glNormal3f(0, -1, 0);
-    glTexCoord2f(0, 0); glVertex3f(-hw, -hh, -hd);
-    glTexCoord2f(1, 0); glVertex3f(hw, -hh, -hd);
-    glTexCoord2f(1, 1); glVertex3f(hw, -hh, hd);
-    glTexCoord2f(0, 1); glVertex3f(-hw, -hh, hd);
+    // Front
+    glNormal3f(0, 0, 1); glTexCoord2f(0, 0); glVertex3f(-hw, -hh, hd); glTexCoord2f(1, 0); glVertex3f(hw, -hh, hd); glTexCoord2f(1, 1); glVertex3f(hw, hh, hd); glTexCoord2f(0, 1); glVertex3f(-hw, hh, hd);
+    // Back
+    glNormal3f(0, 0, -1); glTexCoord2f(0, 0); glVertex3f(hw, -hh, -hd); glTexCoord2f(1, 0); glVertex3f(-hw, -hh, -hd); glTexCoord2f(1, 1); glVertex3f(-hw, hh, -hd); glTexCoord2f(0, 1); glVertex3f(hw, hh, -hd);
+    // Left
+    glNormal3f(-1, 0, 0); glTexCoord2f(0, 0); glVertex3f(-hw, -hh, -hd); glTexCoord2f(1, 0); glVertex3f(-hw, -hh, hd); glTexCoord2f(1, 1); glVertex3f(-hw, hh, hd); glTexCoord2f(0, 1); glVertex3f(-hw, hh, -hd);
+    // Right
+    glNormal3f(1, 0, 0); glTexCoord2f(0, 0); glVertex3f(hw, -hh, hd); glTexCoord2f(1, 0); glVertex3f(hw, -hh, -hd); glTexCoord2f(1, 1); glVertex3f(hw, hh, -hd); glTexCoord2f(0, 1); glVertex3f(hw, hh, hd);
+    // Top
+    glNormal3f(0, 1, 0); glTexCoord2f(0, 0); glVertex3f(-hw, hh, hd); glTexCoord2f(1, 0); glVertex3f(hw, hh, hd); glTexCoord2f(1, 1); glVertex3f(hw, hh, -hd); glTexCoord2f(0, 1); glVertex3f(-hw, hh, -hd);
+    // Bottom
+    glNormal3f(0, -1, 0); glTexCoord2f(0, 0); glVertex3f(-hw, -hh, -hd); glTexCoord2f(1, 0); glVertex3f(hw, -hh, -hd); glTexCoord2f(1, 1); glVertex3f(hw, -hh, hd); glTexCoord2f(0, 1); glVertex3f(-hw, -hh, hd);
     glEnd();
 }
