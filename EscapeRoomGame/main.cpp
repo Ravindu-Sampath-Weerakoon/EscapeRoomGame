@@ -12,8 +12,9 @@
 #include <iostream>
 #include <stdio.h> // For printf
 
-// --- Your Custom Game Modules ---
-#include "InsideWall.h"    // <-- NEW: Include the InsideWall header
+// --- My Custom Game Modules ---
+#include "InsideWall.h"    // Internal Walls
+#include "CornerTower.h"   // <-- NEW: Include the Corner Tower header
 #include "GraphicsUtils.h" // Includes grid constants and collision functions
 #include "Cameras.h"
 #include "Labels.h"
@@ -40,7 +41,8 @@ int g_lastTime = 0;
 Camera* g_camera = nullptr;
 Labels* g_labels = nullptr;
 TheRoom* g_room = nullptr;
-InsideWall* g_insideWalls = nullptr; // <-- NEW: Global pointer for internal walls
+InsideWall* g_insideWalls = nullptr;
+CornerTower* g_tower = nullptr; // <-- NEW: Global pointer for corner towers
 
 // Debug toggle flags
 bool g_showAxes = false;        // Start with axes hidden
@@ -78,7 +80,10 @@ int main(int argc, char** argv) {
 	g_camera = new Camera(win_width, win_height);
 	g_labels = new Labels(win_width, win_height);
 	g_room = new TheRoom(GRID_SIZE, 5.0f, GRID_SIZE);
-	g_insideWalls = new InsideWall(5.0f); // <-- NEW: Initialize InsideWall (Height 5.0)
+	g_insideWalls = new InsideWall(5.0f);
+
+	// --- NEW: Initialize CornerTower (Room Height = 5.0, Tower Width = 1.5) ---
+	g_tower = new CornerTower(5.0f, 1.5f);
 
 	// Center the window
 	int screen_width = glutGet(GLUT_SCREEN_WIDTH);
@@ -101,7 +106,7 @@ int main(int argc, char** argv) {
 	glutPassiveMotionFunc(mouseMotion); // For mouse look
 
 	// Configure the Camera's starting state
-	g_camera->setGroundLevel(1.5f);
+	g_camera->setGroundLevel(1.8f);
 	g_camera->setPosition(-18.0f, -18.0f);
 
 	// 3. Call one-time setup functions
@@ -116,11 +121,13 @@ int main(int argc, char** argv) {
 	delete g_camera;
 	delete g_labels;
 	delete g_room;
-	delete g_insideWalls; // <-- NEW: Clean up
+	delete g_insideWalls;
+	delete g_tower; // <-- NEW: Clean up
 	g_camera = nullptr;
 	g_labels = nullptr;
 	g_room = nullptr;
 	g_insideWalls = nullptr;
+	g_tower = nullptr;
 
 	return 0;
 }
@@ -214,6 +221,29 @@ void init() {
 		g_insideWalls->build(g_room->getWallTextureID());
 	}
 
+	// ====================================================================
+	// NEW: Setup Corner Towers (Adding one to each of the 4 corners)
+	// ====================================================================
+	if (g_tower && g_room) {
+		// Room size is 40x40, so corners are at +/- 20.0f
+
+		//currently not need add corner towers to outside walls
+		//g_tower->addTower(-20.0f, -20.0f); // Back-Left Corner
+		//g_tower->addTower(20.0f, -20.0f); // Back-Right Corner
+		//g_tower->addTower(20.0f, 20.0f); // Front-Right Corner
+		//g_tower->addTower(-20.0f, 20.0f); // Front-Left Corner
+
+		//add coner tower to inside walls
+		g_tower->addTower(16.0f, -16.0f);
+		g_tower->addTower(16.0f, 0.0f);
+		g_tower->addTower(0.0f, -12.0f);
+		g_tower->addTower(-16.0f, 16.0f);
+		g_tower->addTower(-16.0f, 0.0f);
+
+		// Build towers (reuses wall texture for metallic look, or load a new one)
+		g_tower->build(g_room->getWallTextureID());
+	}
+
 	// --- Collision Grid Setup (Boundaries) ---
 	setupCollisionGrid();
 }
@@ -247,6 +277,11 @@ void display() {
 	// Draw Internal Walls
 	if (g_insideWalls) {
 		g_insideWalls->draw();
+	}
+
+	// --- NEW: Draw Corner Towers ---
+	if (g_tower) {
+		g_tower->draw();
 	}
 
 	// --- Draw 2D UI (Labels) ---
@@ -326,6 +361,7 @@ void keyboard(unsigned char key, int x, int y) {
 		delete g_labels;
 		delete g_room;
 		delete g_insideWalls;
+		delete g_tower; // <-- NEW: Clean up
 		exit(0);
 	}
 	if (key == '\t') { // Tab Key
