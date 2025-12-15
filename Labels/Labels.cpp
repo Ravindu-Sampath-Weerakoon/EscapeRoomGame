@@ -136,6 +136,8 @@ void Labels::draw(bool isDeveloperMode, float camX, float camY, float camZ) {
             lines.push_back({ "Mouse      : Look Around", 1.0f, 1.0f, 1.0f });
             lines.push_back({ "Space      : Jump", 1.0f, 1.0f, 1.0f });
             lines.push_back({ "Shift      : Sprint", 1.0f, 1.0f, 1.0f });
+            lines.push_back({ "F          : Flashlight", 1.0f, 1.0f, 1.0f }); // Added Flashlight
+            lines.push_back({ "E          : Interact", 1.0f, 1.0f, 1.0f });   // Added Interact
             lines.push_back({ "", 1.0f, 1.0f, 1.0f }); // Spacer
             lines.push_back({ "P          : Switch to Developer", 1.0f, 1.0f, 1.0f });
         }
@@ -182,4 +184,67 @@ void Labels::draw(bool isDeveloperMode, float camX, float camY, float camZ) {
     glPopMatrix();
     glMatrixMode(GL_MODELVIEW);
     glPopMatrix();
+}
+
+// ================================================================
+// NEW: Draw Center Message (e.g. for Reading Books)
+// ================================================================
+void Labels::drawCenterMessage(const char* message) {
+    glMatrixMode(GL_PROJECTION); glPushMatrix(); glLoadIdentity();
+    gluOrtho2D(0, m_windowWidth, 0, m_windowHeight);
+    glMatrixMode(GL_MODELVIEW); glPushMatrix(); glLoadIdentity();
+    glDisable(GL_LIGHTING); glDisable(GL_DEPTH_TEST);
+
+    int textWidth = getTextWidth(message);
+    float boxWidth = textWidth + 60.0f;
+    float boxHeight = 60.0f;
+
+    float centerX = m_windowWidth / 2.0f;
+    float centerY = m_windowHeight / 2.0f;
+
+    // Top-left of box
+    float boxX = centerX - (boxWidth / 2.0f);
+    float boxY = centerY + (boxHeight / 2.0f);
+
+    // Draw Background
+    drawBackgroundBox(boxX, boxY, boxWidth, boxHeight);
+
+    // Draw Text
+    glColor3f(1.0f, 1.0f, 0.5f); // Pale Yellow
+    // Center text vertically
+    renderText(centerX - (textWidth / 2.0f), centerY - 5, message);
+
+    glEnable(GL_DEPTH_TEST); glEnable(GL_LIGHTING);
+    glMatrixMode(GL_PROJECTION); glPopMatrix();
+    glMatrixMode(GL_MODELVIEW); glPopMatrix();
+}
+
+// ================================================================
+// NEW: Draw Action Hint (e.g. "Press E")
+// ================================================================
+void Labels::drawActionHint(const char* message) {
+    glMatrixMode(GL_PROJECTION); glPushMatrix(); glLoadIdentity();
+    gluOrtho2D(0, m_windowWidth, 0, m_windowHeight);
+    glMatrixMode(GL_MODELVIEW); glPushMatrix(); glLoadIdentity();
+    glDisable(GL_LIGHTING); glDisable(GL_DEPTH_TEST);
+
+    int textWidth = getTextWidth(message);
+    float centerX = m_windowWidth / 2.0f;
+    float y = m_windowHeight / 4.0f; // Lower part of screen
+
+    // Optional: Draw small box behind hint for readability
+    float padding = 20.0f;
+    float boxWidth = textWidth + padding;
+    float boxHeight = 30.0f;
+    float boxX = centerX - (boxWidth / 2.0f);
+    float boxY = y + 20.0f;
+
+    drawBackgroundBox(boxX, boxY, boxWidth, boxHeight);
+
+    glColor3f(1.0f, 1.0f, 1.0f); // White Text
+    renderText(centerX - (textWidth / 2.0f), y, message);
+
+    glEnable(GL_DEPTH_TEST); glEnable(GL_LIGHTING);
+    glMatrixMode(GL_PROJECTION); glPopMatrix();
+    glMatrixMode(GL_MODELVIEW); glPopMatrix();
 }

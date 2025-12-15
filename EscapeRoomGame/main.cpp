@@ -15,6 +15,7 @@
 // --- Your Custom Game Modules ---
 #include "InsideWall.h"    // Internal Walls
 #include "CornerTower.h"   // Corner Towers
+#include "SecretBook.h"    // <-- NEW: Secret Lore Books
 #include "GraphicsUtils.h" // Includes grid constants and collision functions
 #include "Cameras.h"
 #include "Labels.h"
@@ -43,6 +44,7 @@ Labels* g_labels = nullptr;
 TheRoom* g_room = nullptr;
 InsideWall* g_insideWalls = nullptr;
 CornerTower* g_tower = nullptr;
+SecretBook* g_book = nullptr; // <-- NEW: Pointer for book system
 
 // Game State
 bool g_flashlightOn = true;     // Starts with flashlight ON
@@ -83,6 +85,7 @@ int main(int argc, char** argv) {
 	g_room = new TheRoom(GRID_SIZE, 5.0f, GRID_SIZE);
 	g_insideWalls = new InsideWall(5.0f);
 	g_tower = new CornerTower(5.0f, 1.5f); // Height 5.0, Width 1.5
+	g_book = new SecretBook(); // <-- NEW: Initialize Book System
 
 	// Center the window
 	int screen_width = glutGet(GLUT_SCREEN_WIDTH);
@@ -122,11 +125,13 @@ int main(int argc, char** argv) {
 	delete g_room;
 	delete g_insideWalls;
 	delete g_tower;
+	delete g_book; // <-- NEW: Clean up
 	g_camera = nullptr;
 	g_labels = nullptr;
 	g_room = nullptr;
 	g_insideWalls = nullptr;
 	g_tower = nullptr;
+	g_book = nullptr;
 
 	return 0;
 }
@@ -226,7 +231,6 @@ void init() {
 
 	// --- Setup Corner Towers (Your Layout) ---
 	if (g_tower && g_room) {
-		// Adding towers to specific locations inside the maze
 		g_tower->addTower(16.0f, -16.0f);
 		g_tower->addTower(16.0f, 0.0f);
 		g_tower->addTower(0.0f, -12.0f);
@@ -236,13 +240,23 @@ void init() {
 		g_tower->build(g_room->getWallTextureID());
 	}
 
+	// --- NEW: Setup Secret Books ---
+	// Add books at interesting locations with story text
+	if (g_book) {
+		// Book 1: Near spawn
+		g_book->addBook(-18.0f, -15.0f, "Day 1: I woke up here. The walls are cold.");
+
+		// Book 2: In the middle corridor
+		g_book->addBook(0.0f, 0.0f, "Day 3: The darkness is moving. I need a key.");
+
+		// Book 3: Near a tower
+		g_book->addBook(14.0f, -14.0f, "HINT: Look behind the pillars.");
+	}
+
 	// --- Collision Grid Setup (Boundaries) ---
 	setupCollisionGrid();
 }
 
-// ================================================================
-// Display Callback Function (Dynamic Lighting)
-// ================================================================
 // ================================================================
 // Display Callback Function (Dynamic Lighting)
 // ================================================================
@@ -259,14 +273,14 @@ void display() {
 	if (g_camera->isDeveloperMode()) {
 		// Developer Mode: Full Brightness
 		currentAmbient[0] = 0.6f; currentAmbient[1] = 0.6f; currentAmbient[2] = 0.6f;
-		glEnable(GL_LIGHT1); // Enable Spot
-		glDisable(GL_LIGHT2); // Disable Aura (not needed)
+		glEnable(GL_LIGHT1);
+		glDisable(GL_LIGHT2);
 	}
 	else {
 		// Game Mode: Depends on Flashlight
 		if (g_flashlightOn) {
-			glEnable(GL_LIGHT1); // Enable Spot (Distance)
-			glEnable(GL_LIGHT2); // Enable Aura (Nearby)
+			glEnable(GL_LIGHT1);
+			glEnable(GL_LIGHT2);
 			// Ambient stays at 0.3
 		}
 		else {
@@ -280,44 +294,28 @@ void display() {
 
 	if (g_flashlightOn || g_camera->isDeveloperMode()) {
 		// --- LIGHT 1: THE SPOTLIGHT (Torch) ---
-		// Projects light forward to see in the distance
 		if (glIsEnabled(GL_LIGHT1)) {
 			GLfloat spot_pos[] = { 0.0f, 0.0f, 0.0f, 1.0f };
 			GLfloat spot_dir[] = { 0.0f, 0.0f, -1.0f };
 
 			glLightfv(GL_LIGHT1, GL_POSITION, spot_pos);
 			glLightfv(GL_LIGHT1, GL_SPOT_DIRECTION, spot_dir);
-			glLightf(GL_LIGHT1, GL_SPOT_CUTOFF, 50.0f);   // Focused beam
+			glLightf(GL_LIGHT1, GL_SPOT_CUTOFF, 50.0f);
 			glLightf(GL_LIGHT1, GL_SPOT_EXPONENT, 15.0f);
 
-			// Fades over distance
 			glLightf(GL_LIGHT1, GL_CONSTANT_ATTENUATION, 1.0f);
 			glLightf(GL_LIGHT1, GL_LINEAR_ATTENUATION, 0.02f);
 			glLightf(GL_LIGHT1, GL_QUADRATIC_ATTENUATION, 0.0f);
 		}
 
 		// --- LIGHT 2: THE PLAYER AURA (Lantern) ---
-		// Omnidirectional light that illuminates everything CLOSE to the player.
-		// This fixes the "dark wall" issue because it shines in all directions.
 		if (glIsEnabled(GL_LIGHT2)) {
-			// Position: Slightly above head (like a ceiling light following you)
 			GLfloat aura_pos[] = { 0.0f, 0.5f, 0.0f, 1.0f };
-
-			// Color: Warm/Yellowish (Candle-like)
-			// UPDATED: Even Brighter (1.0, 0.95, 0.8)
 			GLfloat aura_color[] = { 1.0f, 0.95f, 0.8f, 1.0f };
 			glLightfv(GL_LIGHT2, GL_DIFFUSE, aura_color);
 			glLightfv(GL_LIGHT2, GL_SPECULAR, aura_color);
-
 			glLightfv(GL_LIGHT2, GL_POSITION, aura_pos);
-
-			// IMPORTANT: Point Light has 180 cutoff (omnidirectional)
 			glLightf(GL_LIGHT2, GL_SPOT_CUTOFF, 180.0f);
-
-			// UPDATED ATTENUATION: Very realistic falloff
-			// Constant=1.0 (Full brightness at source)
-			// Linear=0.02 (Was 0.05) -> Extremely slow fade, reaches far
-			// Quadratic=0.002 (Was 0.005) -> Gentle curve at distance
 			glLightf(GL_LIGHT2, GL_CONSTANT_ATTENUATION, 1.0f);
 			glLightf(GL_LIGHT2, GL_LINEAR_ATTENUATION, 0.02f);
 			glLightf(GL_LIGHT2, GL_QUADRATIC_ATTENUATION, 0.002f);
@@ -341,6 +339,27 @@ void display() {
 	if (g_insideWalls) g_insideWalls->draw();
 	if (g_tower) g_tower->draw();
 
+	// --- NEW: Draw Secret Books ---
+	if (g_book) {
+		g_book->draw();
+
+		// Check for interaction
+		if (g_camera) {
+			int nearIndex = g_book->getNearestBookIndex(g_camera->getX(), g_camera->getZ());
+			if (nearIndex != -1) {
+				// If near a book, check if it's open
+				if (g_book->isBookOpen(nearIndex)) {
+					// Show the book's secret message
+					g_labels->drawCenterMessage(g_book->getBookMessage(nearIndex));
+				}
+				else {
+					// Show interaction hint
+					g_labels->drawActionHint("Press 'E' to Read");
+				}
+			}
+		}
+	}
+
 	// --- Draw 2D UI (Labels) ---
 	if (g_labels && g_camera) {
 		g_labels->draw(
@@ -353,6 +372,7 @@ void display() {
 
 	glutSwapBuffers();
 }
+
 // ================================================================
 // Reshape Callback Function
 // ================================================================
@@ -417,6 +437,7 @@ void keyboard(unsigned char key, int x, int y) {
 		delete g_room;
 		delete g_insideWalls;
 		delete g_tower;
+		delete g_book; // <-- NEW: Clean up
 		exit(0);
 	}
 	if (key == '\t') { // Tab Key
@@ -428,6 +449,19 @@ void keyboard(unsigned char key, int x, int y) {
 	if (key == 'f' || key == 'F') {
 		g_flashlightOn = !g_flashlightOn;
 		printf("Flashlight: %s\n", g_flashlightOn ? "ON" : "OFF");
+	}
+
+	// --- NEW: Interaction Key ('E') ---
+	if (key == 'e' || key == 'E') {
+		if (g_book && g_camera) {
+			// Check if we are near any book
+			int nearIndex = g_book->getNearestBookIndex(g_camera->getX(), g_camera->getZ());
+			if (nearIndex != -1) {
+				// Toggle that specific book (Open/Close)
+				g_book->toggleBook(nearIndex);
+				printf("Interacted with Book %d\n", nearIndex);
+			}
+		}
 	}
 
 	// Toggle Axes ('T') - Dev Mode Only

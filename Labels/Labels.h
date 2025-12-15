@@ -22,6 +22,18 @@ public:
     void draw(bool isDeveloperMode, float camX, float camY, float camZ);
 
     /**
+     * @brief Draws a large message box in the center of the screen (e.g., for reading books).
+     * @param message The text content to display.
+     */
+    void drawCenterMessage(const char* message);
+
+    /**
+     * @brief Draws a small hint (like "Press E") near the bottom center of the screen.
+     * @param message The hint text to display.
+     */
+    void drawActionHint(const char* message);
+
+    /**
      * @brief Call this from your keyboard() function when Tab is pressed.
      */
     void toggleHelp();
