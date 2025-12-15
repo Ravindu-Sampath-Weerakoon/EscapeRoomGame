@@ -231,6 +231,7 @@ void init() {
 
 	// --- Setup Corner Towers (Your Layout) ---
 	if (g_tower && g_room) {
+		// Adding towers to specific locations inside the maze
 		g_tower->addTower(16.0f, -16.0f);
 		g_tower->addTower(16.0f, 0.0f);
 		g_tower->addTower(0.0f, -12.0f);
@@ -295,15 +296,19 @@ void display() {
 	if (g_flashlightOn || g_camera->isDeveloperMode()) {
 		// --- LIGHT 1: THE SPOTLIGHT (Torch) ---
 		if (glIsEnabled(GL_LIGHT1)) {
-			GLfloat spot_pos[] = { 0.0f, 0.0f, 0.0f, 1.0f };
+			// POSITION FIX: Move light 0.5 units BEHIND the camera (+Z) to fix dark wall issue
+			GLfloat spot_pos[] = { 0.0f, 0.0f, 0.5f, 1.0f };
 			GLfloat spot_dir[] = { 0.0f, 0.0f, -1.0f };
 
 			glLightfv(GL_LIGHT1, GL_POSITION, spot_pos);
 			glLightfv(GL_LIGHT1, GL_SPOT_DIRECTION, spot_dir);
-			glLightf(GL_LIGHT1, GL_SPOT_CUTOFF, 50.0f);
-			glLightf(GL_LIGHT1, GL_SPOT_EXPONENT, 15.0f);
 
-			glLightf(GL_LIGHT1, GL_CONSTANT_ATTENUATION, 1.0f);
+			// WIDER BEAM & SOFTER EDGE
+			glLightf(GL_LIGHT1, GL_SPOT_CUTOFF, 70.0f);
+			glLightf(GL_LIGHT1, GL_SPOT_EXPONENT, 20.0f);
+
+			// ATTENUATION: Very slow fade
+			glLightf(GL_LIGHT1, GL_CONSTANT_ATTENUATION, 0.8f);
 			glLightf(GL_LIGHT1, GL_LINEAR_ATTENUATION, 0.02f);
 			glLightf(GL_LIGHT1, GL_QUADRATIC_ATTENUATION, 0.0f);
 		}
@@ -311,11 +316,16 @@ void display() {
 		// --- LIGHT 2: THE PLAYER AURA (Lantern) ---
 		if (glIsEnabled(GL_LIGHT2)) {
 			GLfloat aura_pos[] = { 0.0f, 0.5f, 0.0f, 1.0f };
+			// Brighter, warmer color
 			GLfloat aura_color[] = { 1.0f, 0.95f, 0.8f, 1.0f };
 			glLightfv(GL_LIGHT2, GL_DIFFUSE, aura_color);
 			glLightfv(GL_LIGHT2, GL_SPECULAR, aura_color);
 			glLightfv(GL_LIGHT2, GL_POSITION, aura_pos);
+
+			// Omnidirectional
 			glLightf(GL_LIGHT2, GL_SPOT_CUTOFF, 180.0f);
+
+			// ATTENUATION: Realistic falloff
 			glLightf(GL_LIGHT2, GL_CONSTANT_ATTENUATION, 1.0f);
 			glLightf(GL_LIGHT2, GL_LINEAR_ATTENUATION, 0.02f);
 			glLightf(GL_LIGHT2, GL_QUADRATIC_ATTENUATION, 0.002f);
@@ -416,6 +426,11 @@ void idle() {
 	// 5. Update Game Logic (Physics, Movement, Collision)
 	if (g_camera) {
 		g_camera->update(dt);
+	}
+
+	// --- NEW: Update Book Animations ---
+	if (g_book) {
+		g_book->update(dt);
 	}
 
 	// 6. Request a redraw for the next frame

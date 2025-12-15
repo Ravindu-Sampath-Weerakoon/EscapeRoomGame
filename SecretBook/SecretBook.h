@@ -1,5 +1,4 @@
 #pragma once
-#pragma once
 #include <stdlib.h> // Fix for exit() redefinition
 #include "pch.h"
 #include <glut.h>
@@ -11,6 +10,7 @@ struct BookData {
     float x, z;
     std::string message;
     bool isOpen;
+    float openAngle; // 0.0 (closed) to 180.0 (open)
 };
 
 class SecretBook {
@@ -20,11 +20,16 @@ public:
     // Add a new book to the world
     void addBook(float x, float z, const char* message);
 
+    // Setup textures (Call this in init)
+    void loadTextures(const char* woodTex, const char* bookCoverTex, const char* pageTex);
+
+    // Update animation logic (Call in idle/update)
+    void update(float dt);
+
     // Draw all books
     void draw();
 
     // Check if player is near ANY book. 
-    // Returns index of nearest book, or -1 if none found.
     int getNearestBookIndex(float playerX, float playerZ);
 
     // Interact with a specific book
@@ -34,8 +39,16 @@ public:
 
 private:
     std::vector<BookData> m_books;
-    float m_interactionRange; // e.g., 5.0f
+    float m_interactionRange;
 
-    // Internal helper to draw one book model
-    void drawSingleBook(float x, float z, bool isOpen);
+    // Textures
+    GLuint m_texWood;
+    GLuint m_texCover;
+    GLuint m_texPage;
+
+    // Helper functions
+    void drawStool();
+    void drawAnimatedBook(float angle);
+    void drawBox(float w, float h, float d);
+    GLuint loadTexture(const char* path);
 };
