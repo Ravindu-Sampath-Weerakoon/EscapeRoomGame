@@ -18,6 +18,7 @@
 #include "CornerTower.h"   
 #include "SecretBook.h"    
 #include "SecretDoor.h"    
+#include "RoomDecorations.h" // <-- NEW: Room Decorations
 #include "GraphicsUtils.h" 
 #include "Cameras.h"
 #include "Labels.h"
@@ -48,6 +49,7 @@ InsideWall* g_insideWalls = nullptr;
 CornerTower* g_tower = nullptr;
 SecretBook* g_book = nullptr;
 SecretDoor* g_door = nullptr;
+RoomDecorations* g_decor = nullptr; // <-- NEW: Pointer for decorations
 
 // Game State
 bool g_flashlightOn = true;
@@ -62,7 +64,7 @@ int g_interactingDoorIndex = -1;
 // HELPER: Map door index to its PIN
 std::string getPinForDoor(int index) {
 	if (index == 0) return "157";
-	if (index == 1) return "157";
+	if (index == 1) return "4578";
 	if (index == 2) return "1287";
 	if (index == 3) return "587";
 	if (index == 4) return "324";
@@ -105,6 +107,7 @@ int main(int argc, char** argv) {
 	g_tower = new CornerTower(5.0f, 1.5f);
 	g_book = new SecretBook();
 	g_door = new SecretDoor();
+	g_decor = new RoomDecorations(); // <-- NEW: Initialize Decorations
 
 	// Center the window
 	int screen_width = glutGet(GLUT_SCREEN_WIDTH);
@@ -146,6 +149,7 @@ int main(int argc, char** argv) {
 	delete g_tower;
 	delete g_book;
 	delete g_door;
+	delete g_decor; // <-- NEW: Clean up
 	g_camera = nullptr;
 	g_labels = nullptr;
 	g_room = nullptr;
@@ -153,6 +157,7 @@ int main(int argc, char** argv) {
 	g_tower = nullptr;
 	g_book = nullptr;
 	g_door = nullptr;
+	g_decor = nullptr;
 
 	return 0;
 }
@@ -191,7 +196,7 @@ void init() {
 	// --- LIGHTING SETUP ---
 	glEnable(GL_LIGHTING);
 
-	// 1. Initial Global Ambient
+	// 1. Initial Global Ambient (Will be updated in display loop)
 	GLfloat global_ambient[] = { 0.2f, 0.2f, 0.2f, 1.0f };
 	glLightModelfv(GL_LIGHT_MODEL_AMBIENT, global_ambient);
 
@@ -200,7 +205,7 @@ void init() {
 	glColorMaterial(GL_FRONT, GL_AMBIENT_AND_DIFFUSE);
 
 	GLfloat mat_specular[] = { 1.0f, 1.0f, 1.0f, 1.0f };
-	GLfloat mat_shininess = 50.0f;
+	GLfloat mat_shininess = 50.0f; // Shiny metal look
 	glMaterialfv(GL_FRONT, GL_SPECULAR, mat_specular);
 	glMaterialf(GL_FRONT, GL_SHININESS, mat_shininess);
 
@@ -222,21 +227,40 @@ void init() {
 	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_LOD_BIAS_EXT, -0.5f);
 	glColor3f(1.0f, 1.0f, 1.0f);
 
-	// --- Load Textures ---
+	// --- Load Room Textures ---
 	if (g_room) {
-		g_room->loadTextures("textures/floor.dds", "textures/wall.dds", "textures/ceiling.dds");
+		g_room->loadTextures(
+			"textures/floor.dds",
+			"textures/wall.dds",
+			"textures/ceiling.dds"
+		);
 		g_room->build();
 	}
 
+	// --- Load Secret Book Textures ---
 	if (g_book) {
-		g_book->loadTextures("textures/wood.dds", "textures/book_cover.dds", "textures/book_pages.dds");
+		g_book->loadTextures(
+			"textures/wood.dds",
+			"textures/book_cover.dds",
+			"textures/book_pages.dds"
+		);
 	}
 
+	// --- Load Secret Door Textures ---
 	if (g_door) {
-		g_door->loadTextures("textures/wall.dds", "textures/wood.dds", "textures/floor.dds");
+		g_door->loadTextures(
+			"textures/wall.dds", // Frame
+			"textures/wood.dds", // Panels
+			"textures/floor.dds" // Details (Metal/Wicker)
+		);
 	}
 
-	// --- Setup Environment ---
+	// --- Load Decoration Textures ---
+	if (g_decor) {
+		g_decor->loadTextures("textures/wood.dds", "textures/wall.dds"); // Using existing textures for now
+	}
+
+	// --- Setup Inside Walls (Your Layout) ---
 	if (g_insideWalls && g_room) {
 		g_insideWalls->addWall(-20.0f, -16.0f, 16.0f, -16.0f, 0.5f);
 		g_insideWalls->addWall(-16.0f, 0.0f, 16.0f, 0.0f, 0.5f);
@@ -246,6 +270,7 @@ void init() {
 		g_insideWalls->build(g_room->getWallTextureID());
 	}
 
+	// --- Setup Corner Towers (Your Layout) ---
 	if (g_tower && g_room) {
 		g_tower->addTower(16.0f, -16.0f);
 		g_tower->addTower(16.0f, 0.0f);
@@ -255,27 +280,51 @@ void init() {
 		g_tower->build(g_room->getWallTextureID());
 	}
 
-	// --- SETUP SECRET BOOKS ---
+	// --- Setup Secret Books ---
 	if (g_book) {
-		g_book->addBook(-18.0f, -15.0f, "CLUE #1:\nThe first number is the loneliest number.\n(It is 1)");
-		g_book->addBook(0.0f, 0.0f, "CLUE #2:\nLook at your hand.\nCount the fingers.\n(The second number is 5)");
-		g_book->addBook(14.0f, -14.0f, "CLUE #3:\nDays in a week.\nColors in a rainbow.\n(The final number is 7)");
+		g_book->addBook(-14.0f, -17.0f, "Note #1:\n\nThe first number is the loneliest number.\n");
+		g_book->addBook(-14.8f, -17.0f, "Note #2:\n\nLook at your hand.\nCount the fingers.");
+		g_book->addBook(-15.6f, -17.0f, "Note #3:\n\nDays in a week.\nColors in a rainbow.");
+		g_book->addBook(-2.5f, -17.0f, "oh!! Sometimes \nI forget the pin number,\ntherefore I attach three notes with three hints.");
+		g_book->addBook(1.0f, -12.0f, "As I remember \nI write a pin number's Hint \non my bedroom diary.I");
 	}
 
 	// --- Setup Secret Door ---
 	if (g_door) {
-		g_door->addDoor(0.0f, -10.0f, 1, "157");
-		g_door->addDoor(18.2f, 0.0f, 1, "157");
+		g_door->addDoor(0.0f, -18.0f, 2, "157");
+		g_door->addDoor(18.2f, 0.0f, 1, "4578");
 		g_door->addDoor(0.0f, -14.4f, 2, "1287");
 		g_door->addDoor(-18.5f, 0.0f, 1, "587");
 		g_door->addDoor(-16.0f, 18.25f, 2, "324");
 	}
 
+	// --- Setup Room Decorations ---
+	if (g_decor) {
+		// Add some chairs and tables
+		g_decor->addDecoration(1, 11.5f, -6.0f, -90.0f); // Chair near book 1
+		g_decor->addDecoration(2, 10.0f, -6.0f, 90.0f);  // Table near book 1
+		g_decor->addDecoration(1, 8.5f, -6.0f, 90.0f); // Chair near book 1
+		g_decor->addDecoration(1, 10.0f, -7.5f, 0.0f); // Chair near book 1
+		g_decor->addDecoration(1, 10.0f, -4.5f, -180.0f); // Chair near book 1
+
+
+		g_decor->addDecoration(2, 2.0f, 2.0f, 135.0f);   // Chair near book 2
+
+		g_decor->addDecoration(4, -11.0f, 4.0f, 90.0f);    
+		g_decor->addDecoration(4, -11.0f, 6.00f, 90.0f);
+		g_decor->addDecoration(4, -11.0f, 10.0f, 90.0f);
+		g_decor->addDecoration(4, -11.0f, 12.0f, 90.0f);
+
+		g_decor->addDecoration(3, 15.0f, -15.0f, -45.0f); // Chair near book 3
+		g_decor->addDecoration(5, 10.0f, -15.0f, 0.0f);   // Table near book 3
+	}
+
+	// --- Collision Grid Setup ---
 	setupCollisionGrid();
 }
 
 // ================================================================
-// Display Callback Function
+// Display Callback Function (Dynamic Lighting)
 // ================================================================
 void display() {
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -283,52 +332,70 @@ void display() {
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
 
-	// --- DYNAMIC LIGHTING ---
+	// --- DYNAMIC LIGHTING LOGIC ---
 	GLfloat currentAmbient[] = { 0.3f, 0.3f, 0.3f, 1.0f };
 
 	if (g_camera->isDeveloperMode()) {
+		// Developer Mode: Full Brightness
 		currentAmbient[0] = 0.6f; currentAmbient[1] = 0.6f; currentAmbient[2] = 0.6f;
 		glEnable(GL_LIGHT1);
 		glDisable(GL_LIGHT2);
 	}
 	else {
+		// Game Mode Logic
 		if (g_flashlightOn) {
 			glEnable(GL_LIGHT1);
 			glEnable(GL_LIGHT2);
+			// Ambient stays at 0.3
 		}
 		else {
 			glDisable(GL_LIGHT1);
 			glDisable(GL_LIGHT2);
+			// Extremely dark when flashlight is off
 			currentAmbient[0] = 0.05f; currentAmbient[1] = 0.05f; currentAmbient[2] = 0.05f;
 		}
 	}
 	glLightModelfv(GL_LIGHT_MODEL_AMBIENT, currentAmbient);
 
 	if (g_flashlightOn || g_camera->isDeveloperMode()) {
+		// --- LIGHT 1: THE SPOTLIGHT (Torch) ---
 		if (glIsEnabled(GL_LIGHT1)) {
+			// Positioned slightly behind eye for better wall coverage
 			GLfloat spot_pos[] = { 0.0f, 0.0f, 0.5f, 1.0f };
 			GLfloat spot_dir[] = { 0.0f, 0.0f, -1.0f };
 
 			glLightfv(GL_LIGHT1, GL_POSITION, spot_pos);
 			glLightfv(GL_LIGHT1, GL_SPOT_DIRECTION, spot_dir);
+
+			// WIDER BEAM & SOFTER EDGE
 			glLightf(GL_LIGHT1, GL_SPOT_CUTOFF, 70.0f);
 			glLightf(GL_LIGHT1, GL_SPOT_EXPONENT, 20.0f);
+
+			// ATTENUATION: Very slow fade
 			glLightf(GL_LIGHT1, GL_CONSTANT_ATTENUATION, 0.8f);
 			glLightf(GL_LIGHT1, GL_LINEAR_ATTENUATION, 0.02f);
 			glLightf(GL_LIGHT1, GL_QUADRATIC_ATTENUATION, 0.0f);
 		}
+
+		// --- LIGHT 2: THE PLAYER AURA (Lantern) ---
 		if (glIsEnabled(GL_LIGHT2)) {
 			GLfloat aura_pos[] = { 0.0f, 0.5f, 0.0f, 1.0f };
+			// Brighter, warmer color
 			GLfloat aura_color[] = { 1.0f, 0.95f, 0.8f, 1.0f };
 			glLightfv(GL_LIGHT2, GL_DIFFUSE, aura_color);
 			glLightfv(GL_LIGHT2, GL_SPECULAR, aura_color);
 			glLightfv(GL_LIGHT2, GL_POSITION, aura_pos);
+
+			// Omnidirectional
 			glLightf(GL_LIGHT2, GL_SPOT_CUTOFF, 180.0f);
+
+			// ATTENUATION: Realistic falloff
 			glLightf(GL_LIGHT2, GL_CONSTANT_ATTENUATION, 1.0f);
 			glLightf(GL_LIGHT2, GL_LINEAR_ATTENUATION, 0.02f);
 			glLightf(GL_LIGHT2, GL_QUADRATIC_ATTENUATION, 0.002f);
 		}
 	}
+	// ------------------------------
 
 	g_camera->applyView();
 
@@ -339,6 +406,7 @@ void display() {
 	if (g_room) g_room->draw();
 	if (g_insideWalls) g_insideWalls->draw();
 	if (g_tower) g_tower->draw();
+	if (g_decor) g_decor->draw(); // <-- NEW: Draw Decorations
 
 	// Draw Secret Books
 	if (g_book) {
@@ -364,7 +432,7 @@ void display() {
 			if (doorIdx != -1 && !g_door->isDoorOpen(doorIdx)) {
 				// --- PIN UI LOGIC ---
 				if (g_isEnteringPin && g_interactingDoorIndex == doorIdx) {
-					// Static instruction message instead of showing current input
+					// UPDATED MESSAGE: Two lines for better visibility
 					const char* pinMsg = "Enter PIN to Unlock.\n(Press 'Esc' or 'E' to Cancel)";
 					g_labels->drawCenterMessage(pinMsg);
 				}
@@ -375,7 +443,7 @@ void display() {
 		}
 	}
 
-	// --- Draw 2D UI ---
+	// --- Draw 2D UI (Labels) ---
 	if (g_labels && g_camera) {
 		g_labels->draw(g_camera->isDeveloperMode(), g_camera->getX(), g_camera->getY(), g_camera->getZ());
 	}
@@ -399,7 +467,7 @@ void reshape(int w, int h) {
 }
 
 // ================================================================
-// Idle Callback Function
+// Idle Callback Function (Optimized)
 // ================================================================
 void idle() {
 	int currentTime = glutGet(GLUT_ELAPSED_TIME);
@@ -434,11 +502,14 @@ void keyboard(unsigned char key, int x, int y) {
 			g_interactingDoorIndex = -1;
 			printf("PIN Entry Cancelled.\n");
 		}
-		else if (key >= '0' && key <= '9') {
+		else if (key >= '0' && key <= '9') { // Number keys
+			// LOGIC: Check if this next digit is correct
 			std::string nextPin = g_currentPin + (char)key;
+
+			// DYNAMICALLY get the correct PIN for this door
 			std::string targetPin = getPinForDoor(g_interactingDoorIndex);
 
-			// Sequential check logic
+			// Check validity
 			bool isValidSoFar = true;
 			if (nextPin.length() <= targetPin.length()) {
 				for (size_t i = 0; i < nextPin.length(); i++) {
@@ -477,6 +548,7 @@ void keyboard(unsigned char key, int x, int y) {
 		printf("ESC key pressed. Exiting.\n");
 		delete g_camera; delete g_labels; delete g_room;
 		delete g_insideWalls; delete g_tower; delete g_book; delete g_door;
+		delete g_decor; // <-- NEW: Clean up
 		exit(0);
 	}
 	if (key == '\t') { // Tab Key
@@ -490,8 +562,9 @@ void keyboard(unsigned char key, int x, int y) {
 		printf("Flashlight: %s\n", g_flashlightOn ? "ON" : "OFF");
 	}
 
-	// Interaction Key ('E')
+	// --- INTERACTION KEY ('E') ---
 	if (key == 'e' || key == 'E') {
+		// 1. Check Door Interaction FIRST
 		if (g_door && g_camera) {
 			int doorIndex = g_door->getNearestDoorIndex(g_camera->getX(), g_camera->getZ());
 			if (doorIndex != -1 && !g_door->isDoorOpen(doorIndex)) {
@@ -503,6 +576,7 @@ void keyboard(unsigned char key, int x, int y) {
 			}
 		}
 
+		// 2. Check Book Interaction
 		if (g_book && g_camera) {
 			int bookIndex = g_book->getNearestBookIndex(g_camera->getX(), g_camera->getZ());
 			if (bookIndex != -1) {
@@ -511,6 +585,7 @@ void keyboard(unsigned char key, int x, int y) {
 		}
 	}
 
+	// Developer Toggles
 	if (key == 't' || key == 'T') {
 		if (g_camera->isDeveloperMode()) g_showAxes = !g_showAxes;
 	}

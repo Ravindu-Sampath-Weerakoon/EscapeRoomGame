@@ -19,36 +19,36 @@
     </ProjectConfiguration>
   </ItemGroup>
   <PropertyGroup Label="Globals">
-    <VCProjectVersion>17.0</VCProjectVersion>
+    <VCProjectVersion>18.0</VCProjectVersion>
     <Keyword>Win32Proj</Keyword>
-    <ProjectGuid>{33056391-bab5-4324-bc4f-8ba36d04d789}</ProjectGuid>
-    <RootNamespace>EscapeRoomGame</RootNamespace>
+    <ProjectGuid>{2dadb844-6737-494a-958f-e5611949ddc1}</ProjectGuid>
+    <RootNamespace>RoomDecorations</RootNamespace>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
-    <ConfigurationType>Application</ConfigurationType>
+    <ConfigurationType>StaticLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v143</PlatformToolset>
+    <PlatformToolset>v145</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
-    <ConfigurationType>Application</ConfigurationType>
+    <ConfigurationType>StaticLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v143</PlatformToolset>
+    <PlatformToolset>v145</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
-    <ConfigurationType>Application</ConfigurationType>
+    <ConfigurationType>StaticLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v143</PlatformToolset>
+    <PlatformToolset>v145</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
-    <ConfigurationType>Application</ConfigurationType>
+    <ConfigurationType>StaticLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v143</PlatformToolset>
+    <PlatformToolset>v145</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
@@ -74,16 +74,22 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>$(SolutionDir)GraphicsUtils;$(SolutionDir)Dependencies\opengl\include\GL;$(SolutionDir)Cameras;$(SolutionDir)Labels;$(SolutionDir)Dependencies\SOIL2\includes;$(SolutionDir)TheRoom;$(SolutionDir)InsideWall;$(SolutionDir)CornerTower;$(SolutionDir)SecretBook;$(SolutionDir)SecretDoor;$(SolutionDir)RoomDecorations</AdditionalIncludeDirectories>
+      <LanguageStandard>stdcpp20</LanguageStandard>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
+      <AdditionalIncludeDirectories>$(SolutionDir)GraphicsUtils;$(SolutionDir)Dependencies\SOIL2\includes;$(SolutionDir)Dependencies\opengl\include\GL;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
-      <SubSystem>Console</SubSystem>
+      <SubSystem>
+      </SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>$(SolutionDir)$(Configuration)\GraphicsUtils.lib;glu32.lib;glut32.lib;$(SolutionDir)$(Configuration)\Cameras.lib;$(SolutionDir)$(Configuration)\Labels.lib;soil2-debug.lib;$(SolutionDir)$(Configuration)\TheRoom.lib;$(SolutionDir)$(Configuration)\InsideWall.lib;$(SolutionDir)$(Configuration)\CornerTower.lib;$(SolutionDir)$(Configuration)\SecretBook.lib;$(SolutionDir)$(Configuration)\SecretDoor.lib;$(SolutionDir)$(Configuration)\RoomDecorations.lib</AdditionalDependencies>
-      <AdditionalLibraryDirectories>$(SolutionDir)Dependencies\opengl\lib;$(SolutionDir)Dependencies\SOIL2\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
+    <Lib>
+      <AdditionalDependencies>glu32.lib;glut32.lib;soil2-debug.lib;$(SolutionDir)$(Configuration)\GraphicsUtils.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(SolutionDir)Dependencies\opengl\lib;$(SolutionDir)Dependencies\SOIL2\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+    </Lib>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
@@ -91,11 +97,15 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;NDEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
+      <LanguageStandard>stdcpp20</LanguageStandard>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
     </ClCompile>
     <Link>
-      <SubSystem>Console</SubSystem>
+      <SubSystem>
+      </SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
   </ItemDefinitionGroup>
@@ -103,16 +113,22 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_DEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>$(SolutionDir)GraphicsUtils;$(SolutionDir)Dependencies\opengl\include\GL;$(SolutionDir)Cameras;$(SolutionDir)Labels;$(SolutionDir)Dependencies\SOIL2\includes;$(SolutionDir)TheRoom;$(SolutionDir)InsideWall;$(SolutionDir)CornerTower;$(SolutionDir)SecretBook;$(SolutionDir)SecretDoor;$(SolutionDir)RoomDecorations</AdditionalIncludeDirectories>
+      <LanguageStandard>stdcpp20</LanguageStandard>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
+      <AdditionalIncludeDirectories>$(SolutionDir)GraphicsUtils;$(SolutionDir)Dependencies\SOIL2\includes;$(SolutionDir)Dependencies\opengl\include\GL;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
-      <SubSystem>Console</SubSystem>
+      <SubSystem>
+      </SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>$(SolutionDir)$(Configuration)\GraphicsUtils.lib;glu32.lib;glut32.lib;$(SolutionDir)$(Configuration)\Cameras.lib;$(SolutionDir)$(Configuration)\Labels.lib;soil2-debug.lib;$(SolutionDir)$(Configuration)\TheRoom.lib;$(SolutionDir)$(Configuration)\InsideWall.lib;$(SolutionDir)$(Configuration)\CornerTower.lib;$(SolutionDir)$(Configuration)\SecretBook.lib;$(SolutionDir)$(Configuration)\SecretDoor.lib;$(SolutionDir)$(Configuration)\RoomDecorations.lib</AdditionalDependencies>
-      <AdditionalLibraryDirectories>$(SolutionDir)Dependencies\opengl\lib;$(SolutionDir)Dependencies\SOIL2\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
+    <Lib>
+      <AdditionalDependencies>glu32.lib;glut32.lib;soil2-debug.lib;$(SolutionDir)$(Configuration)\GraphicsUtils.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(SolutionDir)Dependencies\opengl\lib;$(SolutionDir)Dependencies\SOIL2\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+    </Lib>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
@@ -120,45 +136,31 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>NDEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
+      <LanguageStandard>stdcpp20</LanguageStandard>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
     </ClCompile>
     <Link>
-      <SubSystem>Console</SubSystem>
+      <SubSystem>
+      </SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="main.cpp" />
+    <ClInclude Include="framework.h" />
+    <ClInclude Include="pch.h" />
+    <ClInclude Include="RoomDecorations.h" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\Cameras\Cameras.vcxproj">
-      <Project>{1dcfbc21-383c-4d0b-8637-e147fec3bb46}</Project>
-    </ProjectReference>
-    <ProjectReference Include="..\CornerTower\CornerTower.vcxproj">
-      <Project>{f6ab33fb-09d0-436e-a641-94198640885c}</Project>
-    </ProjectReference>
-    <ProjectReference Include="..\GraphicsUtils\GraphicsUtils.vcxproj">
-      <Project>{6e563d33-6361-4312-9f76-f89e635dddd8}</Project>
-    </ProjectReference>
-    <ProjectReference Include="..\InsideWall\InsideWall.vcxproj">
-      <Project>{546cd97d-a8c9-43a6-ab8b-9348dc270ec1}</Project>
-    </ProjectReference>
-    <ProjectReference Include="..\Labels\Labels.vcxproj">
-      <Project>{5621f248-90aa-4a49-970e-46c5ad3ea5e1}</Project>
-    </ProjectReference>
-    <ProjectReference Include="..\RoomDecorations\RoomDecorations.vcxproj">
-      <Project>{2dadb844-6737-494a-958f-e5611949ddc1}</Project>
-    </ProjectReference>
-    <ProjectReference Include="..\SecretBook\SecretBook.vcxproj">
-      <Project>{baded79d-189f-4daf-a1f0-c8dd0506d0f8}</Project>
-    </ProjectReference>
-    <ProjectReference Include="..\SecretDoor\SecretDoor.vcxproj">
-      <Project>{0b00f55d-6cd4-491f-880b-b401393774e4}</Project>
-    </ProjectReference>
-    <ProjectReference Include="..\TheRoom\TheRoom.vcxproj">
-      <Project>{daf047fc-ab87-43d9-880b-255341ca76c7}</Project>
-    </ProjectReference>
+    <ClCompile Include="pch.cpp">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="RoomDecorations.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
