@@ -28,26 +28,52 @@ void Labels::toggleHelp() {
     m_showHelp = !m_showHelp;
 }
 
-// --- Helper to measure text width in pixels ---
+// --- Helper to measure text width in pixels (Multi-line support) ---
 int Labels::getTextWidth(const char* text) {
-    return glutBitmapLength(m_font, (const unsigned char*)text);
+    int maxWidth = 0;
+    int currentWidth = 0;
+
+    while (*text) {
+        if (*text == '\n') {
+            // End of line: check if this was the widest so far
+            if (currentWidth > maxWidth) maxWidth = currentWidth;
+            currentWidth = 0; // Reset for next line
+        }
+        else {
+            currentWidth += glutBitmapWidth(m_font, *text);
+        }
+        text++;
+    }
+    // Check last line
+    if (currentWidth > maxWidth) maxWidth = currentWidth;
+
+    return maxWidth;
 }
 
+// --- UPDATED: Renders text with support for '\n' newlines ---
 void Labels::renderText(float x, float y, const char* text) {
+    float startX = x;
     glRasterPos2f(x, y);
+
     while (*text) {
-        glutBitmapCharacter(m_font, *text);
+        if (*text == '\n') {
+            // Move down by one line height
+            y -= m_lineHeight;
+            glRasterPos2f(startX, y);
+        }
+        else {
+            glutBitmapCharacter(m_font, *text);
+        }
         text++;
     }
 }
 
 // --- Helper: Draws a transparent black box ---
-// (Static function: internal to this file only)
 static void drawBackgroundBox(float x, float y, float w, float h) {
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-    glColor4f(0.0f, 0.0f, 0.0f, 0.6f); // Black with 60% Opacity
+    glColor4f(0.0f, 0.0f, 0.0f, 0.8f); // Darker background for readability
 
     glBegin(GL_QUADS);
     glVertex2f(x, y);         // Top Left
@@ -74,41 +100,30 @@ void Labels::draw(bool isDeveloperMode, float camX, float camY, float camZ) {
     glDisable(GL_DEPTH_TEST);
 
     // ============================================================
-    // RIGHT PANEL: Coordinates (Top-Right) - AUTO SIZED
+    // RIGHT PANEL: Coordinates (Top-Right)
     // ============================================================
     if (isDeveloperMode) {
         char coordBuffer[128];
-        // Format: X : 10.5  Y : 5.0  Z : -15.2
         sprintf_s(coordBuffer, sizeof(coordBuffer), "X : %.1f   Y : %.1f   Z : %.1f", camX, camY, camZ);
 
-        // 1. Calculate Width dynamically
         int textWidth = getTextWidth(coordBuffer);
-
-        float padding = 30.0f; // Total horizontal padding
+        float padding = 30.0f;
         float boxWidth = textWidth + padding;
         float boxHeight = 30.0f;
 
         float rightMargin = 20.0f;
         float topMargin = 20.0f;
-
-        // Position: Align to right based on dynamic width
         float boxX = m_windowWidth - boxWidth - rightMargin;
         float boxY = m_windowHeight - topMargin;
 
-        // Draw Box
         drawBackgroundBox(boxX, boxY, boxWidth, boxHeight);
-
-        // Draw Text (White)
         glColor3f(1.0f, 1.0f, 1.0f);
-        // Center text vertically inside the box
         renderText(boxX + (padding / 2), boxY - 20, coordBuffer);
     }
 
     // ============================================================
-    // LEFT PANEL: Controls / Help (Top-Left) - AUTO SIZED
+    // LEFT PANEL: Controls / Help (Top-Left)
     // ============================================================
-
-    // 1. Prepare the list of lines to draw
     std::vector<HudLine> lines;
 
     if (!m_showHelp) {
@@ -116,11 +131,11 @@ void Labels::draw(bool isDeveloperMode, float camX, float camY, float camZ) {
     }
     else {
         lines.push_back({ "Press 'Tab' to hide controls", 1.0f, 1.0f, 1.0f });
-        lines.push_back({ "", 1.0f, 1.0f, 1.0f }); // Spacer
+        lines.push_back({ "", 1.0f, 1.0f, 1.0f });
 
         if (isDeveloperMode) {
-            lines.push_back({ "[ DEVELOPER MODE ]", 1.0f, 0.5f, 0.5f }); // Light Red
-            lines.push_back({ "", 1.0f, 1.0f, 1.0f }); // Spacer
+            lines.push_back({ "[ DEVELOPER MODE ]", 1.0f, 0.5f, 0.5f });
+            lines.push_back({ "", 1.0f, 1.0f, 1.0f });
             lines.push_back({ "WASD       : Move (Fly)", 1.0f, 1.0f, 1.0f });
             lines.push_back({ "Q / E      : Fly Up/Down", 1.0f, 1.0f, 1.0f });
             lines.push_back({ "Arrows     : Look Around", 1.0f, 1.0f, 1.0f });
@@ -130,32 +145,28 @@ void Labels::draw(bool isDeveloperMode, float camX, float camY, float camZ) {
             lines.push_back({ "P          : Switch to Game Mode", 1.0f, 1.0f, 1.0f });
         }
         else {
-            lines.push_back({ "[ GAME MODE ]", 0.5f, 1.0f, 0.5f }); // Light Green
-            lines.push_back({ "", 1.0f, 1.0f, 1.0f }); // Spacer
+            lines.push_back({ "[ GAME MODE ]", 0.5f, 1.0f, 0.5f });
+            lines.push_back({ "", 1.0f, 1.0f, 1.0f });
             lines.push_back({ "W A S D    : Move (Walk)", 1.0f, 1.0f, 1.0f });
             lines.push_back({ "Mouse      : Look Around", 1.0f, 1.0f, 1.0f });
             lines.push_back({ "Space      : Jump", 1.0f, 1.0f, 1.0f });
             lines.push_back({ "Shift      : Sprint", 1.0f, 1.0f, 1.0f });
-            lines.push_back({ "F          : Flashlight", 1.0f, 1.0f, 1.0f }); // Added Flashlight
-            lines.push_back({ "E          : Interact", 1.0f, 1.0f, 1.0f });   // Added Interact
-            lines.push_back({ "", 1.0f, 1.0f, 1.0f }); // Spacer
+            lines.push_back({ "F          : Flashlight", 1.0f, 1.0f, 1.0f });
+            lines.push_back({ "E          : Interact", 1.0f, 1.0f, 1.0f });
+            lines.push_back({ "", 1.0f, 1.0f, 1.0f });
             lines.push_back({ "P          : Switch to Developer", 1.0f, 1.0f, 1.0f });
         }
     }
 
-    // 2. Calculate Max Width needed
     int maxTextWidth = 0;
     for (const auto& line : lines) {
         int w = getTextWidth(line.text.c_str());
         if (w > maxTextWidth) maxTextWidth = w;
     }
 
-    // 3. Define Box Dimensions based on content
     float padding = 30.0f;
     float boxWidth = maxTextWidth + padding;
-    float boxHeight = (lines.size() * m_lineHeight) + 15.0f; // 15px vertical padding
-
-    // Adjust height for single line (make it a bit slimmer visually)
+    float boxHeight = (lines.size() * m_lineHeight) + 15.0f;
     if (lines.size() == 1) boxHeight = 30.0f;
 
     float leftMargin = 20.0f;
@@ -163,10 +174,8 @@ void Labels::draw(bool isDeveloperMode, float camX, float camY, float camZ) {
     float boxX = leftMargin;
     float boxY = m_windowHeight - topMargin;
 
-    // 4. Draw Background
     drawBackgroundBox(boxX, boxY, boxWidth, boxHeight);
 
-    // 5. Draw All Lines
     float textX = boxX + (padding / 2);
     float textY = boxY - 20;
 
@@ -176,10 +185,8 @@ void Labels::draw(bool isDeveloperMode, float camX, float camY, float camZ) {
         textY -= m_lineHeight;
     }
 
-    // Restore 3D settings
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_LIGHTING);
-
     glMatrixMode(GL_PROJECTION);
     glPopMatrix();
     glMatrixMode(GL_MODELVIEW);
@@ -187,7 +194,7 @@ void Labels::draw(bool isDeveloperMode, float camX, float camY, float camZ) {
 }
 
 // ================================================================
-// NEW: Draw Center Message (e.g. for Reading Books)
+// NEW: Draw Center Message (UPDATED for Multi-line)
 // ================================================================
 void Labels::drawCenterMessage(const char* message) {
     glMatrixMode(GL_PROJECTION); glPushMatrix(); glLoadIdentity();
@@ -195,14 +202,24 @@ void Labels::drawCenterMessage(const char* message) {
     glMatrixMode(GL_MODELVIEW); glPushMatrix(); glLoadIdentity();
     glDisable(GL_LIGHTING); glDisable(GL_DEPTH_TEST);
 
+    // 1. Calculate Width (Max line width)
     int textWidth = getTextWidth(message);
-    float boxWidth = textWidth + 60.0f;
-    float boxHeight = 60.0f;
+
+    // 2. Calculate Height (Count newlines)
+    int lineCount = 1;
+    const char* ptr = message;
+    while (*ptr) {
+        if (*ptr == '\n') lineCount++;
+        ptr++;
+    }
+
+    float padding = 40.0f;
+    float boxWidth = textWidth + padding;
+    float boxHeight = (lineCount * m_lineHeight) + padding;
 
     float centerX = m_windowWidth / 2.0f;
     float centerY = m_windowHeight / 2.0f;
 
-    // Top-left of box
     float boxX = centerX - (boxWidth / 2.0f);
     float boxY = centerY + (boxHeight / 2.0f);
 
@@ -211,8 +228,11 @@ void Labels::drawCenterMessage(const char* message) {
 
     // Draw Text
     glColor3f(1.0f, 1.0f, 0.5f); // Pale Yellow
-    // Center text vertically
-    renderText(centerX - (textWidth / 2.0f), centerY - 5, message);
+
+    // Adjust start Y position so text is vertically centered
+    // Start at top of box minus padding
+    float textY = boxY - (padding / 1.5f);
+    renderText(centerX - (textWidth / 2.0f), textY, message);
 
     glEnable(GL_DEPTH_TEST); glEnable(GL_LIGHTING);
     glMatrixMode(GL_PROJECTION); glPopMatrix();
@@ -220,7 +240,7 @@ void Labels::drawCenterMessage(const char* message) {
 }
 
 // ================================================================
-// NEW: Draw Action Hint (e.g. "Press E")
+// NEW: Draw Action Hint
 // ================================================================
 void Labels::drawActionHint(const char* message) {
     glMatrixMode(GL_PROJECTION); glPushMatrix(); glLoadIdentity();
@@ -230,9 +250,8 @@ void Labels::drawActionHint(const char* message) {
 
     int textWidth = getTextWidth(message);
     float centerX = m_windowWidth / 2.0f;
-    float y = m_windowHeight / 4.0f; // Lower part of screen
+    float y = m_windowHeight / 4.0f;
 
-    // Optional: Draw small box behind hint for readability
     float padding = 20.0f;
     float boxWidth = textWidth + padding;
     float boxHeight = 30.0f;

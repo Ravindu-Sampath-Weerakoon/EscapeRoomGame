@@ -59,6 +59,16 @@ bool g_isEnteringPin = false;
 std::string g_currentPin = "";
 int g_interactingDoorIndex = -1;
 
+// HELPER: Map door index to its PIN
+std::string getPinForDoor(int index) {
+	if (index == 0) return "157";
+	if (index == 1) return "157";
+	if (index == 2) return "1287";
+	if (index == 3) return "587";
+	if (index == 4) return "324";
+	return "000";
+}
+
 // --- Function Declarations ---
 void display();
 void reshape(int w, int h);
@@ -181,32 +191,30 @@ void init() {
 	// --- LIGHTING SETUP ---
 	glEnable(GL_LIGHTING);
 
-	// 1. Initial Global Ambient (Will be updated in display loop)
+	// 1. Initial Global Ambient
 	GLfloat global_ambient[] = { 0.2f, 0.2f, 0.2f, 1.0f };
 	glLightModelfv(GL_LIGHT_MODEL_AMBIENT, global_ambient);
 
-	// 2. Material Properties (High Shininess for Towers)
+	// 2. Material Properties
 	glEnable(GL_COLOR_MATERIAL);
 	glColorMaterial(GL_FRONT, GL_AMBIENT_AND_DIFFUSE);
 
 	GLfloat mat_specular[] = { 1.0f, 1.0f, 1.0f, 1.0f };
-	GLfloat mat_shininess = 50.0f; // Shiny metal look
+	GLfloat mat_shininess = 50.0f;
 	glMaterialfv(GL_FRONT, GL_SPECULAR, mat_specular);
 	glMaterialf(GL_FRONT, GL_SHININESS, mat_shininess);
 
-	// 3. FLASHLIGHT SETUP (GL_LIGHT1)
+	// 3. FLASHLIGHT SETUP
 	GLfloat light_diffuse[] = { 1.0f, 1.0f, 0.9f, 1.0f };
 	GLfloat light_specular[] = { 1.0f, 1.0f, 1.0f, 1.0f };
 
 	glLightfv(GL_LIGHT1, GL_DIFFUSE, light_diffuse);
 	glLightfv(GL_LIGHT1, GL_SPECULAR, light_specular);
 
-	glLightf(GL_LIGHT1, GL_SPOT_CUTOFF, 25.0f);   // 25 degree beam
-	glLightf(GL_LIGHT1, GL_SPOT_EXPONENT, 10.0f); // Focused center
-
+	glLightf(GL_LIGHT1, GL_SPOT_CUTOFF, 180.0f);
 	glLightf(GL_LIGHT1, GL_CONSTANT_ATTENUATION, 1.0f);
-	glLightf(GL_LIGHT1, GL_LINEAR_ATTENUATION, 0.05f);
-	glLightf(GL_LIGHT1, GL_QUADRATIC_ATTENUATION, 0.005f);
+	glLightf(GL_LIGHT1, GL_LINEAR_ATTENUATION, 0.1f);
+	glLightf(GL_LIGHT1, GL_QUADRATIC_ATTENUATION, 0.01f);
 
 	glEnable(GL_LIGHT1);
 
@@ -214,35 +222,21 @@ void init() {
 	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_LOD_BIAS_EXT, -0.5f);
 	glColor3f(1.0f, 1.0f, 1.0f);
 
-	// --- Load Room Textures ---
+	// --- Load Textures ---
 	if (g_room) {
-		g_room->loadTextures(
-			"textures/floor.dds",
-			"textures/wall.dds",
-			"textures/ceiling.dds"
-		);
+		g_room->loadTextures("textures/floor.dds", "textures/wall.dds", "textures/ceiling.dds");
 		g_room->build();
 	}
 
-	// --- Load Secret Book Textures ---
 	if (g_book) {
-		g_book->loadTextures(
-			"textures/wood.dds",
-			"textures/book_cover.dds",
-			"textures/book_pages.dds"
-		);
+		g_book->loadTextures("textures/wood.dds", "textures/book_cover.dds", "textures/book_pages.dds");
 	}
 
-	// --- Load Secret Door Textures ---
 	if (g_door) {
-		g_door->loadTextures(
-			"textures/wall.dds", // Frame
-			"textures/wood.dds", // Panels
-			"textures/wicker.dds" // Details (Metal/Wicker)
-		);
+		g_door->loadTextures("textures/wall.dds", "textures/wood.dds", "textures/floor.dds");
 	}
 
-	// --- Setup Inside Walls (Your Layout) ---
+	// --- Setup Environment ---
 	if (g_insideWalls && g_room) {
 		g_insideWalls->addWall(-20.0f, -16.0f, 16.0f, -16.0f, 0.5f);
 		g_insideWalls->addWall(-16.0f, 0.0f, 16.0f, 0.0f, 0.5f);
@@ -252,7 +246,6 @@ void init() {
 		g_insideWalls->build(g_room->getWallTextureID());
 	}
 
-	// --- Setup Corner Towers (Your Layout) ---
 	if (g_tower && g_room) {
 		g_tower->addTower(16.0f, -16.0f);
 		g_tower->addTower(16.0f, 0.0f);
@@ -262,30 +255,27 @@ void init() {
 		g_tower->build(g_room->getWallTextureID());
 	}
 
-	// --- Setup Secret Books ---
+	// --- SETUP SECRET BOOKS ---
 	if (g_book) {
-		g_book->addBook(-18.0f, -15.0f, "Day 1: I woke up here. The walls are cold.");
-		g_book->addBook(0.0f, 0.0f, "Day 3: The darkness is moving. I need a key.");
-		g_book->addBook(14.0f, -14.0f, "HINT: The door code is 123.");
+		g_book->addBook(-18.0f, -15.0f, "CLUE #1:\nThe first number is the loneliest number.\n(It is 1)");
+		g_book->addBook(0.0f, 0.0f, "CLUE #2:\nLook at your hand.\nCount the fingers.\n(The second number is 5)");
+		g_book->addBook(14.0f, -14.0f, "CLUE #3:\nDays in a week.\nColors in a rainbow.\n(The final number is 7)");
 	}
 
 	// --- Setup Secret Door ---
 	if (g_door) {
-		// Add a door blocking the path near the center
-		// NOTE: Width is 4 units.
-		g_door->addDoor(0.0f, -18.1f, 2, "123");
-		g_door->addDoor(18.2f, 0.0f, 1, "123");
-		g_door->addDoor(0.0f, -14.4f, 2, "123");
-		g_door->addDoor(-18.5f, 0.0f, 1, "123");
-		g_door->addDoor(-16.0f, 18.25f, 2, "123");
+		g_door->addDoor(0.0f, -10.0f, 1, "157");
+		g_door->addDoor(18.2f, 0.0f, 1, "157");
+		g_door->addDoor(0.0f, -14.4f, 2, "1287");
+		g_door->addDoor(-18.5f, 0.0f, 1, "587");
+		g_door->addDoor(-16.0f, 18.25f, 2, "324");
 	}
 
-	// --- Collision Grid Setup (Boundaries) ---
 	setupCollisionGrid();
 }
 
 // ================================================================
-// Display Callback Function (Dynamic Lighting)
+// Display Callback Function
 // ================================================================
 void display() {
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -293,35 +283,29 @@ void display() {
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
 
-	// --- DYNAMIC LIGHTING LOGIC ---
+	// --- DYNAMIC LIGHTING ---
 	GLfloat currentAmbient[] = { 0.3f, 0.3f, 0.3f, 1.0f };
 
 	if (g_camera->isDeveloperMode()) {
-		// Developer Mode: Full Brightness
 		currentAmbient[0] = 0.6f; currentAmbient[1] = 0.6f; currentAmbient[2] = 0.6f;
 		glEnable(GL_LIGHT1);
 		glDisable(GL_LIGHT2);
 	}
 	else {
-		// Game Mode Logic
 		if (g_flashlightOn) {
 			glEnable(GL_LIGHT1);
 			glEnable(GL_LIGHT2);
-			// Ambient stays at 0.3
 		}
 		else {
 			glDisable(GL_LIGHT1);
 			glDisable(GL_LIGHT2);
-			// Extremely dark when flashlight is off
 			currentAmbient[0] = 0.05f; currentAmbient[1] = 0.05f; currentAmbient[2] = 0.05f;
 		}
 	}
 	glLightModelfv(GL_LIGHT_MODEL_AMBIENT, currentAmbient);
 
 	if (g_flashlightOn || g_camera->isDeveloperMode()) {
-		// --- LIGHT 1: THE SPOTLIGHT (Torch) ---
 		if (glIsEnabled(GL_LIGHT1)) {
-			// Positioned slightly behind eye for better wall coverage
 			GLfloat spot_pos[] = { 0.0f, 0.0f, 0.5f, 1.0f };
 			GLfloat spot_dir[] = { 0.0f, 0.0f, -1.0f };
 
@@ -329,16 +313,12 @@ void display() {
 			glLightfv(GL_LIGHT1, GL_SPOT_DIRECTION, spot_dir);
 			glLightf(GL_LIGHT1, GL_SPOT_CUTOFF, 70.0f);
 			glLightf(GL_LIGHT1, GL_SPOT_EXPONENT, 20.0f);
-
 			glLightf(GL_LIGHT1, GL_CONSTANT_ATTENUATION, 0.8f);
 			glLightf(GL_LIGHT1, GL_LINEAR_ATTENUATION, 0.02f);
 			glLightf(GL_LIGHT1, GL_QUADRATIC_ATTENUATION, 0.0f);
 		}
-
-		// --- LIGHT 2: THE PLAYER AURA (Lantern) ---
 		if (glIsEnabled(GL_LIGHT2)) {
 			GLfloat aura_pos[] = { 0.0f, 0.5f, 0.0f, 1.0f };
-			// Brighter, warmer color
 			GLfloat aura_color[] = { 1.0f, 0.95f, 0.8f, 1.0f };
 			glLightfv(GL_LIGHT2, GL_DIFFUSE, aura_color);
 			glLightfv(GL_LIGHT2, GL_SPECULAR, aura_color);
@@ -349,7 +329,6 @@ void display() {
 			glLightf(GL_LIGHT2, GL_QUADRATIC_ATTENUATION, 0.002f);
 		}
 	}
-	// ------------------------------
 
 	g_camera->applyView();
 
@@ -383,21 +362,20 @@ void display() {
 		if (g_camera) {
 			int doorIdx = g_door->getNearestDoorIndex(g_camera->getX(), g_camera->getZ());
 			if (doorIdx != -1 && !g_door->isDoorOpen(doorIdx)) {
+				// --- PIN UI LOGIC ---
 				if (g_isEnteringPin && g_interactingDoorIndex == doorIdx) {
-					// SHOW PIN ENTRY UI
-					char pinBuffer[64];
-					sprintf_s(pinBuffer, "ENTER PIN: %s", g_currentPin.c_str());
-					g_labels->drawCenterMessage(pinBuffer);
+					// Static instruction message instead of showing current input
+					const char* pinMsg = "Enter PIN to Unlock.\n(Press 'Esc' or 'E' to Cancel)";
+					g_labels->drawCenterMessage(pinMsg);
 				}
 				else if (!g_isEnteringPin) {
-					// SHOW HINT
 					g_labels->drawActionHint("Press 'E' to Unlock");
 				}
 			}
 		}
 	}
 
-	// --- Draw 2D UI (Labels) ---
+	// --- Draw 2D UI ---
 	if (g_labels && g_camera) {
 		g_labels->draw(g_camera->isDeveloperMode(), g_camera->getX(), g_camera->getY(), g_camera->getZ());
 	}
@@ -421,7 +399,7 @@ void reshape(int w, int h) {
 }
 
 // ================================================================
-// Idle Callback Function (Optimized)
+// Idle Callback Function
 // ================================================================
 void idle() {
 	int currentTime = glutGet(GLUT_ELAPSED_TIME);
@@ -443,25 +421,24 @@ void idle() {
 // ================================================================
 
 void keyboard(unsigned char key, int x, int y) {
-	// If NOT typing a PIN, update camera modifiers
 	if (!g_isEnteringPin) {
 		g_camera->updateModifiers(glutGetModifiers());
 	}
 
 	// --- HANDLE PIN ENTRY MODE ---
 	if (g_isEnteringPin) {
-		if (key == 27) { // ESC: Cancel PIN entry
+		// CANCEL logic: 'Esc' OR 'E'
+		if (key == 27 || key == 'e' || key == 'E') {
 			g_isEnteringPin = false;
 			g_currentPin = "";
 			g_interactingDoorIndex = -1;
 			printf("PIN Entry Cancelled.\n");
 		}
-		else if (key >= '0' && key <= '9') { // Number keys
-			// LOGIC: Check if this next digit is correct
+		else if (key >= '0' && key <= '9') {
 			std::string nextPin = g_currentPin + (char)key;
-			std::string targetPin = "123"; // Hardcoded PIN for now
+			std::string targetPin = getPinForDoor(g_interactingDoorIndex);
 
-			// Check validity
+			// Sequential check logic
 			bool isValidSoFar = true;
 			if (nextPin.length() <= targetPin.length()) {
 				for (size_t i = 0; i < nextPin.length(); i++) {
@@ -491,8 +468,7 @@ void keyboard(unsigned char key, int x, int y) {
 				g_currentPin = "";
 			}
 		}
-
-		return; // Don't process other keys while typing
+		return;
 	}
 
 	// --- NORMAL GAME KEYS ---
@@ -514,9 +490,8 @@ void keyboard(unsigned char key, int x, int y) {
 		printf("Flashlight: %s\n", g_flashlightOn ? "ON" : "OFF");
 	}
 
-	// --- INTERACTION KEY ('E') ---
+	// Interaction Key ('E')
 	if (key == 'e' || key == 'E') {
-		// 1. Check Door Interaction FIRST
 		if (g_door && g_camera) {
 			int doorIndex = g_door->getNearestDoorIndex(g_camera->getX(), g_camera->getZ());
 			if (doorIndex != -1 && !g_door->isDoorOpen(doorIndex)) {
@@ -528,7 +503,6 @@ void keyboard(unsigned char key, int x, int y) {
 			}
 		}
 
-		// 2. Check Book Interaction
 		if (g_book && g_camera) {
 			int bookIndex = g_book->getNearestBookIndex(g_camera->getX(), g_camera->getZ());
 			if (bookIndex != -1) {
@@ -537,7 +511,6 @@ void keyboard(unsigned char key, int x, int y) {
 		}
 	}
 
-	// Developer Toggles
 	if (key == 't' || key == 'T') {
 		if (g_camera->isDeveloperMode()) g_showAxes = !g_showAxes;
 	}
