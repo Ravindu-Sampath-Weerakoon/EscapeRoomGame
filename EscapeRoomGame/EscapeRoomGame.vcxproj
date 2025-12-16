@@ -76,12 +76,12 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>$(SolutionDir)GraphicsUtils;$(SolutionDir)Dependencies\opengl\include\GL;$(SolutionDir)Cameras;$(SolutionDir)Labels;$(SolutionDir)Dependencies\SOIL2\includes;$(SolutionDir)TheRoom;$(SolutionDir)InsideWall;$(SolutionDir)CornerTower;$(SolutionDir)SecretBook</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)GraphicsUtils;$(SolutionDir)Dependencies\opengl\include\GL;$(SolutionDir)Cameras;$(SolutionDir)Labels;$(SolutionDir)Dependencies\SOIL2\includes;$(SolutionDir)TheRoom;$(SolutionDir)InsideWall;$(SolutionDir)CornerTower;$(SolutionDir)SecretBook;$(SolutionDir)SecretDoor</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>$(SolutionDir)$(Configuration)\GraphicsUtils.lib;glu32.lib;glut32.lib;$(SolutionDir)$(Configuration)\Cameras.lib;$(SolutionDir)$(Configuration)\Labels.lib;soil2-debug.lib;$(SolutionDir)$(Configuration)\TheRoom.lib;$(SolutionDir)$(Configuration)\InsideWall.lib;$(SolutionDir)$(Configuration)\CornerTower.lib;$(SolutionDir)$(Configuration)\SecretBook.lib</AdditionalDependencies>
+      <AdditionalDependencies>$(SolutionDir)$(Configuration)\GraphicsUtils.lib;glu32.lib;glut32.lib;$(SolutionDir)$(Configuration)\Cameras.lib;$(SolutionDir)$(Configuration)\Labels.lib;soil2-debug.lib;$(SolutionDir)$(Configuration)\TheRoom.lib;$(SolutionDir)$(Configuration)\InsideWall.lib;$(SolutionDir)$(Configuration)\CornerTower.lib;$(SolutionDir)$(Configuration)\SecretBook.lib;$(SolutionDir)$(Configuration)\SecretDoor.lib</AdditionalDependencies>
       <AdditionalLibraryDirectories>$(SolutionDir)Dependencies\opengl\lib;$(SolutionDir)Dependencies\SOIL2\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
@@ -105,12 +105,12 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>$(SolutionDir)GraphicsUtils;$(SolutionDir)Dependencies\opengl\include\GL;$(SolutionDir)Cameras;$(SolutionDir)Labels;$(SolutionDir)Dependencies\SOIL2\includes;$(SolutionDir)TheRoom;$(SolutionDir)InsideWall;$(SolutionDir)CornerTower;$(SolutionDir)SecretBook</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)GraphicsUtils;$(SolutionDir)Dependencies\opengl\include\GL;$(SolutionDir)Cameras;$(SolutionDir)Labels;$(SolutionDir)Dependencies\SOIL2\includes;$(SolutionDir)TheRoom;$(SolutionDir)InsideWall;$(SolutionDir)CornerTower;$(SolutionDir)SecretBook;$(SolutionDir)SecretDoor</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>$(SolutionDir)$(Configuration)\GraphicsUtils.lib;glu32.lib;glut32.lib;$(SolutionDir)$(Configuration)\Cameras.lib;$(SolutionDir)$(Configuration)\Labels.lib;soil2-debug.lib;$(SolutionDir)$(Configuration)\TheRoom.lib;$(SolutionDir)$(Configuration)\InsideWall.lib;$(SolutionDir)$(Configuration)\CornerTower.lib;$(SolutionDir)$(Configuration)\SecretBook.lib</AdditionalDependencies>
+      <AdditionalDependencies>$(SolutionDir)$(Configuration)\GraphicsUtils.lib;glu32.lib;glut32.lib;$(SolutionDir)$(Configuration)\Cameras.lib;$(SolutionDir)$(Configuration)\Labels.lib;soil2-debug.lib;$(SolutionDir)$(Configuration)\TheRoom.lib;$(SolutionDir)$(Configuration)\InsideWall.lib;$(SolutionDir)$(Configuration)\CornerTower.lib;$(SolutionDir)$(Configuration)\SecretBook.lib;$(SolutionDir)$(Configuration)\SecretDoor.lib</AdditionalDependencies>
       <AdditionalLibraryDirectories>$(SolutionDir)Dependencies\opengl\lib;$(SolutionDir)Dependencies\SOIL2\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
@@ -149,6 +149,9 @@
     </ProjectReference>
     <ProjectReference Include="..\SecretBook\SecretBook.vcxproj">
       <Project>{baded79d-189f-4daf-a1f0-c8dd0506d0f8}</Project>
+    </ProjectReference>
+    <ProjectReference Include="..\SecretDoor\SecretDoor.vcxproj">
+      <Project>{0b00f55d-6cd4-491f-880b-b401393774e4}</Project>
     </ProjectReference>
     <ProjectReference Include="..\TheRoom\TheRoom.vcxproj">
       <Project>{daf047fc-ab87-43d9-880b-255341ca76c7}</Project>
