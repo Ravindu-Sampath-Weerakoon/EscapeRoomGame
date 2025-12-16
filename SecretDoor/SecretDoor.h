@@ -26,8 +26,11 @@ public:
     // pin: 3-digit string (e.g., "123")
     void addDoor(float x, float z, int direction, const char* pin);
 
-    // Load textures (optional, can use colors for now)
-    void loadTextures(const char* doorTex);
+    // Load textures
+    // frameTex: The static posts/beam
+    // doorTex: The moving panels
+    // detailTex: The new top cylinders/handles
+    void loadTextures(const char* frameTex, const char* doorTex, const char* detailTex);
 
     // Update animation logic
     void update(float dt);
@@ -49,11 +52,16 @@ public:
 private:
     std::vector<DoorData> m_doors;
     float m_interactionRange;
+
+    // TEXTURE IDs
+    GLuint m_texFrame;
     GLuint m_texDoor;
+    GLuint m_texDetail;
 
     // Helper to draw the physical door
     void drawDoorModel(float angle, int direction);
     void drawBox(float w, float h, float d);
+    void drawCylinder(float radius, float height); // New helper for cylinders
 
     // Collision helpers
     void updateCollision(int index, bool block);

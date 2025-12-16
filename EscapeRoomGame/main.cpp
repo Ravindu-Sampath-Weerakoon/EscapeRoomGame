@@ -58,7 +58,6 @@ bool g_showCoordinates = false;
 bool g_isEnteringPin = false;
 std::string g_currentPin = "";
 int g_interactingDoorIndex = -1;
-// Note: We'll retrieve the correct target PIN from the door object dynamically
 
 // --- Function Declarations ---
 void display();
@@ -236,7 +235,11 @@ void init() {
 
 	// --- Load Secret Door Textures ---
 	if (g_door) {
-		g_door->loadTextures("textures/wall.dds");
+		g_door->loadTextures(
+			"textures/wall.dds", // Frame
+			"textures/wood.dds", // Panels
+			"textures/wicker.dds" // Details (Metal/Wicker)
+		);
 	}
 
 	// --- Setup Inside Walls (Your Layout) ---
@@ -269,7 +272,12 @@ void init() {
 	// --- Setup Secret Door ---
 	if (g_door) {
 		// Add a door blocking the path near the center
-		g_door->addDoor(1.0f, -18.0f, 2, "123");
+		// NOTE: Width is 4 units.
+		g_door->addDoor(0.0f, -18.1f, 2, "123");
+		g_door->addDoor(18.2f, 0.0f, 1, "123");
+		g_door->addDoor(0.0f, -14.4f, 2, "123");
+		g_door->addDoor(-18.5f, 0.0f, 1, "123");
+		g_door->addDoor(-16.0f, 18.25f, 2, "123");
 	}
 
 	// --- Collision Grid Setup (Boundaries) ---
@@ -330,6 +338,7 @@ void display() {
 		// --- LIGHT 2: THE PLAYER AURA (Lantern) ---
 		if (glIsEnabled(GL_LIGHT2)) {
 			GLfloat aura_pos[] = { 0.0f, 0.5f, 0.0f, 1.0f };
+			// Brighter, warmer color
 			GLfloat aura_color[] = { 1.0f, 0.95f, 0.8f, 1.0f };
 			glLightfv(GL_LIGHT2, GL_DIFFUSE, aura_color);
 			glLightfv(GL_LIGHT2, GL_SPECULAR, aura_color);
@@ -449,22 +458,10 @@ void keyboard(unsigned char key, int x, int y) {
 		}
 		else if (key >= '0' && key <= '9') { // Number keys
 			// LOGIC: Check if this next digit is correct
-
-			// 1. Calculate what the string WOULD be
 			std::string nextPin = g_currentPin + (char)key;
+			std::string targetPin = "123"; // Hardcoded PIN for now
 
-			// 2. We need to check against the REAL pin. 
-			// But 'SecretDoor' doesn't expose a simple "getPin()" for security/encapsulation.
-			// Instead, we will assume for this game logic that we want to match "123".
-			// OR better: we define the expected PIN logic right here.
-			// Let's assume the target PIN is "123" for simplicity, or query the object if we expanded it.
-			// For now, hardcoded logic for "123" sequence.
-
-			std::string targetPin = "123"; // The master code for this door
-
-			// Check if the sequence so far matches the start of the target
-			// e.g. if target is "123", "1" is valid. "12" is valid. "14" is INVALID.
-
+			// Check validity
 			bool isValidSoFar = true;
 			if (nextPin.length() <= targetPin.length()) {
 				for (size_t i = 0; i < nextPin.length(); i++) {
@@ -475,14 +472,11 @@ void keyboard(unsigned char key, int x, int y) {
 				}
 			}
 			else {
-				isValidSoFar = false; // Too long
+				isValidSoFar = false;
 			}
 
 			if (isValidSoFar) {
-				// Good key! Append it.
 				g_currentPin = nextPin;
-
-				// Auto-unlock if complete
 				if (g_currentPin == targetPin) {
 					if (g_door && g_door->tryUnlock(g_interactingDoorIndex, g_currentPin.c_str())) {
 						printf("Door Unlocked!\n");
@@ -493,13 +487,12 @@ void keyboard(unsigned char key, int x, int y) {
 				}
 			}
 			else {
-				// Wrong key! RESET immediately.
 				printf("Wrong digit! Resetting.\n");
 				g_currentPin = "";
 			}
 		}
 
-		return; // Don't process other game keys while typing
+		return; // Don't process other keys while typing
 	}
 
 	// --- NORMAL GAME KEYS ---

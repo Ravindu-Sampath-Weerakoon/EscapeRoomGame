@@ -6,7 +6,7 @@
 #include <SOIL2.h>
 
 SecretDoor::SecretDoor()
-    : m_interactionRange(2.5f), m_texDoor(0)
+    : m_interactionRange(2.5f), m_texFrame(0), m_texDoor(0), m_texDetail(0)
 {
 }
 
@@ -31,27 +31,18 @@ void SecretDoor::updateCollision(int index, bool isClosed) {
     DoorData& d = m_doors[index];
 
     // Grid Logic (4 Units Wide):
-    // Center is at (d.x, d.z). 
-    // This typically aligns with a grid line boundary if the width is even (4).
-    // Let's assume (x,z) is the exact center of the 4-unit span.
-    //
-    // Logic:
     // Left/Top Post: ALWAYS BLOCKED
     // Left/Top Door: Blocked if Closed
     // Right/Bot Door: Blocked if Closed
     // Right/Bot Post: ALWAYS BLOCKED
 
     int centerX, centerZ;
-    // We use a small offset to ensure we catch the 'lower' grid index if on a boundary
     if (!worldToGrid(d.x - 0.1f, d.z - 0.1f, centerX, centerZ)) return;
 
     std::vector<std::pair<int, int>> cellsToBlock;
     std::vector<std::pair<int, int>> cellsToUnblock;
 
     if (d.direction == 1) { // Parallel to X-axis
-        // Center is between centerX and centerX+1.
-        // We span 4 cells: [centerX-1], [centerX], [centerX+1], [centerX+2]
-
         // Always block Posts (Outer edges)
         cellsToBlock.push_back({ centerX - 1, centerZ }); // Far Left Post
         cellsToBlock.push_back({ centerX + 2, centerZ }); // Far Right Post
@@ -68,9 +59,6 @@ void SecretDoor::updateCollision(int index, bool isClosed) {
         }
     }
     else { // Parallel to Z-axis
-        // Spanning Z.
-        // Cells: [centerZ-1], [centerZ], [centerZ+1], [centerZ+2]
-
         // Always block Posts
         cellsToBlock.push_back({ centerX, centerZ - 1 }); // Top Post
         cellsToBlock.push_back({ centerX, centerZ + 2 }); // Bottom Post
@@ -148,8 +136,10 @@ bool SecretDoor::isDoorOpen(int index) {
     return false;
 }
 
-void SecretDoor::loadTextures(const char* doorTex) {
+void SecretDoor::loadTextures(const char* frameTex, const char* doorTex, const char* detailTex) {
+    m_texFrame = loadTexture(frameTex);
     m_texDoor = loadTexture(doorTex);
+    m_texDetail = loadTexture(detailTex);
 }
 
 GLuint SecretDoor::loadTexture(const char* path) {
@@ -176,79 +166,139 @@ void SecretDoor::draw() {
     glDisable(GL_TEXTURE_2D);
 }
 
+// Forward declaration if not in header
+// void drawCylinder(float radius, float height); 
+
+// Helper to draw a fancy handle
+void drawHandle() {
+    // A nice knob handle: A small horizontal cylinder coming out, then a sphere/disk
+
+    // 1. Stem (Horizontal Cylinder)
+    GLUquadricObj* q = gluNewQuadric();
+    gluQuadricNormals(q, GLU_SMOOTH);
+    gluCylinder(q, 0.03f, 0.03f, 0.1f, 12, 1);
+
+    // 2. Knob (Sphere at the end)
+    glPushMatrix();
+    glTranslatef(0.0f, 0.0f, 0.1f); // Move to end of stem
+    gluSphere(q, 0.06f, 12, 12);
+    glPopMatrix();
+
+    gluDeleteQuadric(q);
+}
+
 void SecretDoor::drawDoorModel(float angle, int direction) {
-    // Dimensions: Width is 4.0
     float doorW = 4.0f;
     float doorH = 3.5f;
-    float doorThick = 0.3f;
-
-    // Post Dimensions (Takes up 1.0 unit each)
+    float doorThick = 0.4f;
     float postW = 1.0f;
     float postD = 0.8f;
 
     // --- STATIC FRAME ---
-    glDisable(GL_TEXTURE_2D);
-    glColor3f(0.3f, 0.3f, 0.3f); // Dark Grey Frame
+    // Apply FRAME Texture
+    if (m_texFrame) { glEnable(GL_TEXTURE_2D); glBindTexture(GL_TEXTURE_2D, m_texFrame); glColor3f(1, 1, 1); }
+    else { glDisable(GL_TEXTURE_2D); glColor3f(0.2f, 0.2f, 0.2f); }
 
-    // Left Post (Centered at -1.5)
-    // -doorW/2 + postW/2 = -2.0 + 0.5 = -1.5
-    glPushMatrix();
-    glTranslatef(-1.5f, doorH / 2, 0);
-    drawBox(postW, doorH, postD);
-    glPopMatrix();
+    // Left Post (-1.5)
+    glPushMatrix(); glTranslatef(-1.5f, doorH / 2, 0); drawBox(postW, doorH, postD); glPopMatrix();
+    // Right Post (+1.5)
+    glPushMatrix(); glTranslatef(1.5f, doorH / 2, 0); drawBox(postW, doorH, postD); glPopMatrix();
+    // Top Bar
+    glPushMatrix(); glTranslatef(0, doorH, 0); drawBox(doorW, 0.5f, postD); glPopMatrix();
 
-    // Right Post (Centered at +1.5)
-    // doorW/2 - postW/2 = 2.0 - 0.5 = 1.5
-    glPushMatrix();
-    glTranslatef(1.5f, doorH / 2, 0);
-    drawBox(postW, doorH, postD);
-    glPopMatrix();
+    // --- NEW: TOP CYLINDERS (Wicker Fence Style) ---
+    // Apply DETAIL Texture
+    if (m_texDetail) { glEnable(GL_TEXTURE_2D); glBindTexture(GL_TEXTURE_2D, m_texDetail); glColor3f(1, 1, 1); }
+    else { glDisable(GL_TEXTURE_2D); glColor3f(0.6f, 0.6f, 0.6f); }
 
-    // Top Bar (Spans the whole 4.0 width)
-    glPushMatrix();
-    glTranslatef(0, doorH, 0);
-    drawBox(doorW, 0.5f, postD);
-    glPopMatrix();
+    // Dimensions for top pillars
+    float cylHeight = 1.5f;
+    float cylRadius = 0.10f; // Slightly thinner as requested
+
+    // Place 8 cylinders spaced along the top bar
+    // Width is 4.0 (-2.0 to 2.0). 
+    float startX = -1.8f;
+    float step = 3.6f / 7.0f; // Distribute 8 items across 3.6 width
+
+    for (int i = 0; i < 8; i++) {
+        glPushMatrix();
+        glTranslatef(startX + (i * step), doorH + 0.25f, 0.0f); // Sit on top of the bar
+        glRotatef(-90.0f, 1.0f, 0.0f, 0.0f);
+        drawCylinder(cylRadius, cylHeight);
+        glPopMatrix();
+    }
 
 
-    // --- DOUBLE DOORS (Two Pieces in the Middle) ---
+    // --- DOUBLE DOORS ---
+    // Apply DOOR Texture
     if (m_texDoor) { glEnable(GL_TEXTURE_2D); glBindTexture(GL_TEXTURE_2D, m_texDoor); glColor3f(1, 1, 1); }
-    else { glDisable(GL_TEXTURE_2D); glColor3f(0.6f, 0.4f, 0.2f); }
+    else { glDisable(GL_TEXTURE_2D); glColor3f(0.5f, 0.55f, 0.6f); }
 
-    // Middle Opening = Total (4.0) - Posts (2.0) = 2.0
-    // Each panel width = 1.0
     float panelW = 1.0f;
 
     // -- LEFT PANEL --
-    // Pivot at inner edge of Left Post.
-    // Left Post inner edge is at -1.0.
     glPushMatrix();
     glTranslatef(-1.0f, 0.0f, 0.0f); // Hinge
-    glRotatef(angle, 0.0f, 1.0f, 0.0f);   // Rotate Out (Left)
+    glRotatef(angle, 0.0f, 1.0f, 0.0f);
+    glTranslatef(panelW / 2.0f, doorH / 2, 0.0f); // Center Panel
 
-    // Draw Panel (Centered at +0.5 local X)
-    glTranslatef(panelW / 2.0f, doorH / 2, 0.0f);
+    // Draw Door Panel
     drawBox(panelW, doorH, doorThick);
+
+    // Draw Handle (Detailed)
+    if (m_texDetail) { glBindTexture(GL_TEXTURE_2D, m_texDetail); }
+    else { glDisable(GL_TEXTURE_2D); glColor3f(0.8f, 0.7f, 0.2f); }
+
+    // Front Handle
+    glPushMatrix();
+    glTranslatef(0.3f, 0.0f, (doorThick / 5.0f) + 0.02f); // Stick out from surface
+    drawHandle();
+    glPopMatrix();
+
+    // Back Handle (Rotate 180 to face other way)
+    glPushMatrix();
+    glTranslatef(0.3f, 0.0f, -(doorThick / 5.0f) - 0.02f);
+    glRotatef(180.0f, 1.0f, 0.0f, 0.0f);
+    drawHandle();
+    glPopMatrix();
+
+    // Restore Door Texture
+    if (m_texDoor) { glEnable(GL_TEXTURE_2D); glBindTexture(GL_TEXTURE_2D, m_texDoor); glColor3f(1, 1, 1); }
     glPopMatrix();
 
 
     // -- RIGHT PANEL --
-    // Pivot at inner edge of Right Post.
-    // Right Post inner edge is at +1.0.
     glPushMatrix();
     glTranslatef(1.0f, 0.0f, 0.0f); // Hinge
-    glRotatef(-angle, 0.0f, 1.0f, 0.0f);   // Rotate Out (Right)
-
-    // Draw Panel (Centered at -0.5 local X)
-    glTranslatef(-panelW / 2.0f, doorH / 2, 0.0f);
+    glRotatef(-angle, 0.0f, 1.0f, 0.0f);
+    glTranslatef(-panelW / 2.0f, doorH / 2, 0.0f); // Center Panel
     drawBox(panelW, doorH, doorThick);
+
+    // Draw Handle (Detailed)
+    if (m_texDetail) { glBindTexture(GL_TEXTURE_2D, m_texDetail); }
+    else { glDisable(GL_TEXTURE_2D); glColor3f(0.8f, 0.7f, 0.2f); }
+
+    // Front Handle
+    glPushMatrix();
+    glTranslatef(-0.3f, 0.0f, (doorThick / 5.0f) + 0.02f);
+    drawHandle();
+    glPopMatrix();
+
+    // Back Handle
+    glPushMatrix();
+    glTranslatef(-0.3f, 0.0f, -(doorThick / 5.0f) - 0.02f);
+    glRotatef(180.0f, 1.0f, 0.0f, 0.0f);
+    drawHandle();
+    glPopMatrix();
+
     glPopMatrix();
 }
 
+// UPDATED drawBox with thinned depth (d/5.0f)
 void SecretDoor::drawBox(float w, float h, float d) {
     float hw = w / 2.0f;
     float hh = h / 2.0f;
-    float hd = d / 2.0f;
+    float hd = d / 5.0f; // <-- UPDATED as requested to make panels thinner visually relative to collision
 
     glBegin(GL_QUADS);
     glNormal3f(0, 0, 1); glTexCoord2f(0, 0); glVertex3f(-hw, -hh, hd); glTexCoord2f(1, 0); glVertex3f(hw, -hh, hd); glTexCoord2f(1, 1); glVertex3f(hw, hh, hd); glTexCoord2f(0, 1); glVertex3f(-hw, hh, hd);
@@ -258,4 +308,19 @@ void SecretDoor::drawBox(float w, float h, float d) {
     glNormal3f(0, 1, 0); glTexCoord2f(0, 0); glVertex3f(-hw, hh, hd); glTexCoord2f(1, 0); glVertex3f(hw, hh, hd); glTexCoord2f(1, 1); glVertex3f(hw, hh, -hd); glTexCoord2f(0, 1); glVertex3f(-hw, hh, -hd);
     glNormal3f(0, -1, 0); glTexCoord2f(0, 0); glVertex3f(-hw, -hh, -hd); glTexCoord2f(1, 0); glVertex3f(hw, -hh, -hd); glTexCoord2f(1, 1); glVertex3f(hw, -hh, hd); glTexCoord2f(0, 1); glVertex3f(-hw, -hh, hd);
     glEnd();
+}
+
+void SecretDoor::drawCylinder(float radius, float height) {
+    GLUquadricObj* quadratic;
+    quadratic = gluNewQuadric();
+    gluQuadricNormals(quadratic, GLU_SMOOTH);
+    gluQuadricTexture(quadratic, GL_TRUE); // Enable texture coords
+    gluCylinder(quadratic, radius, radius, height, 16, 2);
+    // Draw cap
+    gluDisk(quadratic, 0, radius, 16, 1);
+    glPushMatrix();
+    glTranslatef(0, 0, height);
+    gluDisk(quadratic, 0, radius, 16, 1);
+    glPopMatrix();
+    gluDeleteQuadric(quadratic);
 }
