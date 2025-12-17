@@ -1,5 +1,4 @@
 #pragma once
-#pragma once
 #include <stdlib.h> // Standard library
 #include "pch.h"
 #include <glut.h>
@@ -50,6 +49,12 @@ private:
     void drawBed(float x, float z, float rot);
     void drawRack(float x, float z, float rot);
     void drawCrate(float x, float z, float rot); // Placeholder
+
+    void drawFloorLamp(float x, float z, float rot);
+    void drawSofa(float x, float z, float rot);
+    void drawTVUnit(float x, float z, float rot);
+    void drawDesk(float x, float z, float rot);
+    void drawPlant(float x, float z, float rot);
 
     void drawCylinder(float radius, float height, int segments);
 

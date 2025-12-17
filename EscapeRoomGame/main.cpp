@@ -64,10 +64,10 @@ int g_interactingDoorIndex = -1;
 // HELPER: Map door index to its PIN
 std::string getPinForDoor(int index) {
 	if (index == 0) return "157";
-	if (index == 1) return "4578";
-	if (index == 2) return "1287";
-	if (index == 3) return "587";
-	if (index == 4) return "324";
+	if (index == 1) return "1134";
+	if (index == 2) return "1927";
+	if (index == 3) return "188";
+	if (index == 4) return "111";
 	return "000";
 }
 
@@ -130,7 +130,7 @@ int main(int argc, char** argv) {
 	glutPassiveMotionFunc(mouseMotion);
 
 	// Configure the Camera's starting state
-	g_camera->setGroundLevel(1.8f);
+	g_camera->setGroundLevel(2.2f);
 	g_camera->setPosition(-18.0f, -18.0f);
 
 	// 3. Call one-time setup functions
@@ -287,15 +287,23 @@ void init() {
 		g_book->addBook(-15.6f, -17.0f, "Note #3:\n\nDays in a week.\nColors in a rainbow.");
 		g_book->addBook(-2.5f, -17.0f, "oh!! Sometimes \nI forget the pin number,\ntherefore I attach three notes with three hints.");
 		g_book->addBook(1.0f, -12.0f, "As I remember \nI write a pin number's Hint \non my bedroom diary.I");
+		g_book->addBook(6.0f, -15.0f, "There are four inner planets in our solar system: \nMercury, Venus, Earth, and Mars, \noften called terrestrial planets because they are rocky, \ndense, and orbit closest to the Sun, \ninside the asteroid belt. ");
+		g_book->addBook(7.0f, -15.0f, "The first man landed on the Moon in 1969, \nduring the NASA Apollo 11 mission, \nwhen astronaut Neil Armstrong stepped onto the lunar \nsurface on July 20, 1969, \nfollowed by Buzz Aldrin, fulfilling President Kennedy's goal. ");
+		g_book->addBook(19.0f, -3.0f, "I saw You sleep lot of time,\and therefore I set look,\n the look is the 4 digit\n are what is the __ apollo , How many people in rocket . \nand ,how many inner planets in our solar system.");
+		g_book->addBook(6.0f, -2.0f, "The Apollo 11 crew consisted of three astronauts: ");
+		g_book->addBook(6.0f, -3.0f, "The first fully electronic television system was demonstrated \nby Philo Taylor Farnsworth in 1927 ");
+		g_book->addBook(-1.0f, 4.0f, "The tv room pin is which year the fist tv made");
+		g_book->addBook(-14.0f, -2.0f, "The fist tow digit look at the sofa and cout something");
+		g_book->addBook(-2.0f, -2.0f, "The next  digit how may pellows in my bed room");
 	}
 
 	// --- Setup Secret Door ---
 	if (g_door) {
 		g_door->addDoor(0.0f, -18.0f, 2, "157");
-		g_door->addDoor(18.2f, 0.0f, 1, "4578");
-		g_door->addDoor(0.0f, -14.4f, 2, "1287");
-		g_door->addDoor(-18.5f, 0.0f, 1, "587");
-		g_door->addDoor(-16.0f, 18.25f, 2, "324");
+		g_door->addDoor(18.2f, 0.0f, 1, "1134");
+		g_door->addDoor(0.0f, -14.4f, 2, "1927");
+		g_door->addDoor(-18.5f, 0.0f, 1, "188");
+		g_door->addDoor(-16.0f, 18.25f, 2, "111");
 	}
 
 	// --- Setup Room Decorations ---
@@ -306,6 +314,7 @@ void init() {
 		g_decor->addDecoration(1, 8.5f, -6.0f, 90.0f); // Chair near book 1
 		g_decor->addDecoration(1, 10.0f, -7.5f, 0.0f); // Chair near book 1
 		g_decor->addDecoration(1, 10.0f, -4.5f, -180.0f); // Chair near book 1
+		g_decor->addDecoration(1, 4.0f, -3.0f, -180.0f); // Chair near book 1
 
 
 		g_decor->addDecoration(2, 2.0f, 2.0f, 135.0f);   // Chair near book 2
@@ -315,8 +324,39 @@ void init() {
 		g_decor->addDecoration(4, -11.0f, 10.0f, 90.0f);
 		g_decor->addDecoration(4, -11.0f, 12.0f, 90.0f);
 
+		//crberd
 		g_decor->addDecoration(3, 15.0f, -15.0f, -45.0f); // Chair near book 3
-		g_decor->addDecoration(5, 10.0f, -15.0f, 0.0f);   // Table near book 3
+		g_decor->addDecoration(3, 1.0f, -7.0f, 90.0f); // Chair near book 3
+
+		//rack
+		g_decor->addDecoration(5, 10.0f, -15.0f, 0.0f);   
+		g_decor->addDecoration(5, 19.0f, -10.0f, 90.0f);   
+		g_decor->addDecoration(5, 19.0f, -6.0f, 90.0f);   
+
+		//lamp
+		g_decor->addDecoration(6, 3.0f, -7.0f, 0.0f);   // Table near book 3
+		g_decor->addDecoration(6, 14.0f, -9.0f, 0.0f);   // Table near book 3
+		g_decor->addDecoration(6, -19.0f, -19.0f, 0.0f);   // Table near book 3
+		g_decor->addDecoration(6, -19.0f, -14.0f, 0.0f);   // Table near book 3
+		g_decor->addDecoration(6, -14.0f, 1.0f, 0.0f);   // Table near book 3
+		g_decor->addDecoration(6, -14.0f, 14.0f, 0.0f);   // Table near book 3
+
+		//plant
+		g_decor->addDecoration(10, 2.0f, -2.0f, 90.0f);   // Table near book 3
+		g_decor->addDecoration(10, -5.0f, -3.0f, 75.0f);   // Table near book 3
+		g_decor->addDecoration(10, -11.0f, -3.0f, 45.0f);   // Table near book 3
+		g_decor->addDecoration(10, 15.5f, -17.5f, 45.0f);   // Table near book 3
+
+		  // Table near book 3
+		g_decor->addDecoration(9, 4.0f, -5.0f, 0.0f);   // Table near book 3
+
+		//tv unit
+		g_decor->addDecoration(8, -8.0f, -3.0f, 180.0f);   // Table near book 3
+
+		//sofa
+		g_decor->addDecoration(7, -8.0f, -10.0f, 0.0f);   // Table near book 3
+
+
 	}
 
 	// --- Collision Grid Setup ---
