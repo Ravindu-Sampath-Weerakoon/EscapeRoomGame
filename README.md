@@ -159,7 +159,7 @@ graph TD
 
 ## 📦 Modular Sub-Projects & Class Deep-Dive
 
-### 1. Main Game Controller ([EscapeRoomGame](file:///D:/My Work/My_CV/project_repos/EscapeRoomGame/EscapeRoomGame/main.cpp))
+### 1. Main Game Controller ([EscapeRoomGame](EscapeRoomGame/EscapeRoomGame/main.cpp))
 - **Role:** Handles the startup process, links the modules together, and directs OS events to their respective controllers.
 - **Responsibilities:**
   - Standard glut initialization (`glutInitDisplayMode`, `glutCreateWindow`, window centering math).
@@ -167,7 +167,7 @@ graph TD
   - Instantiating and cleaning up global pointers (`g_camera`, `g_room`, `g_insideWalls`, `g_tower`, `g_book`, `g_door`, `g_decor`, `g_labels`).
   - Handling real-time PIN code routing and validation logic.
 
-### 2. First-Person Camera Engine ([Cameras](file:///D:/My Work/My_CV/project_repos/EscapeRoomGame/Cameras/Cameras.h))
+### 2. First-Person Camera Engine ([Cameras](EscapeRoomGame/Cameras/Cameras.h))
 - **Role:** Manages coordinates, camera orientation vectors, physical speed parameters, and state changes.
 - **Responsibilities:**
   - Translating mouse delta inputs to Yaw and Pitch values.
@@ -177,34 +177,34 @@ graph TD
   - Implementing physics calculations (jump impulses, gravity pull, speed damping).
   - Performing collision checking against target cells before committing coordinate updates.
 
-### 3. Room Geometry Builder ([TheRoom](file:///D:/My Work/My_CV/project_repos/EscapeRoomGame/TheRoom/TheRoom.h))
+### 3. Room Geometry Builder ([TheRoom](EscapeRoomGame/TheRoom/TheRoom.h))
 - **Role:** Generates the base layout of the room, including the floor, walls, and ceiling.
 - **Responsibilities:**
   - Loading texture maps via SOIL2 and setting up mipmapping parameters.
   - Compiling visual commands into an **OpenGL Display List** (`glGenLists`, `glNewList`, `glEndList`) to cache calculations directly on the GPU.
   - Applying texture wrap settings (`GL_REPEAT`) and surface normals ($\vec{N}$) for lighting models.
 
-### 4. Custom Architecture Elements ([InsideWall](file:///D:/My Work/My_CV/project_repos/EscapeRoomGame/InsideWall/InsideWall.h) & [CornerTower](file:///D:/My Work/My_CV/project_repos/EscapeRoomGame/CornerTower/CornerTower.h))
+### 4. Custom Architecture Elements ([InsideWall](EscapeRoomGame/InsideWall/InsideWall.h) & [CornerTower](EscapeRoomGame/CornerTower/CornerTower.h))
 - **Role:** Adds interior walls and structural corner towers to partition rooms and define the game map layout.
 - **Responsibilities:**
   - **InsideWall:** Creates wall panels of adjustable thickness and automatically blocks the corresponding coordinates in the collision system.
   - **CornerTower:** Renders detailed architectural pillars with a 3-tier cascading base and capital, adding decorative corner accents while acting as physical barriers.
   - Uses Display Lists for fast, hardware-accelerated rendering.
 
-### 5. Interactive Environment Objects ([SecretBook](file:///D:/My Work/My_CV/project_repos/EscapeRoomGame/SecretBook/SecretBook.h) & [SecretDoor](file:///D:/My Work/My_CV/project_repos/EscapeRoomGame/SecretDoor/SecretDoor.h))
+### 5. Interactive Environment Objects ([SecretBook](EscapeRoomGame/SecretBook/SecretBook.h) & [SecretDoor](EscapeRoomGame/SecretDoor/SecretDoor.h))
 - **Role:** Coordinates the visual display, physical barriers, and interaction logic for books and gated doors.
 - **Responsibilities:**
   - **SecretBook:** Displays open/closed animations by rotating the top cover and pages over the spine axis (hinge). Includes a detailed wood-textured stool base.
   - **SecretDoor:** Renders double-doors with brass handles and details like a top grill (built using GLU quadric cylinders). Manages smooth swinging animation states and updates the collision grid when unlocked.
 
-### 6. Dynamic HUD Renderer ([Labels](file:///D:/My Work/My_CV/project_repos/EscapeRoomGame/Labels/Labels.h))
+### 6. Dynamic HUD Renderer ([Labels](EscapeRoomGame/Labels/Labels.h))
 - **Role:** Draws standard 2D overlay graphics, help screens, interactive dialog boxes, and coordinate details.
 - **Responsibilities:**
   - Shifting OpenGL matrices from 3D projective coordinates to a 2D Orthographic view (`gluOrtho2D`).
   - Measuring line widths in pixels (`glutBitmapWidth`) to auto-size dark background boxes for readability.
   - Rendering text strings using raster characters (`glutBitmapCharacter`).
 
-### 7. Coordinates & Debug Utilities ([GraphicsUtils](file:///D:/My Work/My_CV/project_repos/EscapeRoomGame/GraphicsUtils/GraphicsUtils.h))
+### 7. Coordinates & Debug Utilities ([GraphicsUtils](EscapeRoomGame/GraphicsUtils/GraphicsUtils.h))
 - **Role:** Coordinates mapping systems, collision arrays, and debug visuals.
 - **Responsibilities:**
   - Storing the global collision data array.
